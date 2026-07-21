@@ -78,6 +78,8 @@ export default function PromoteBannerPage() {
   const [submitMessage, setSubmitMessage] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showPaymentPopup, setShowPaymentPopup] = useState(false);
+  const [pendingPaymentBanner, setPendingPaymentBanner] = useState(null);
 
   const selectedDays = useMemo(() => selectedDates.length, [selectedDates]);
   const subtotal = selectedDays * DAILY_BANNER_RATE;
@@ -136,7 +138,16 @@ export default function PromoteBannerPage() {
         throw new Error(response.error || response.message || "Failed to submit banner.");
       }
 
-      setSubmitMessage("Banner approved! Redirecting to payments...");
+      const responseData = response?.data || {};
+
+      if (Number(responseData.totalPrice) > 0) {
+        setPendingPaymentBanner(responseData);
+        setShowPaymentPopup(true);
+        setSubmitting(false);
+        return;
+      }
+
+      setSubmitMessage("Free banner submitted successfully! Redirecting...");
       setBannerTitle("");
       setSelectedDates([]);
       setBannerPreview("");
@@ -471,6 +482,45 @@ export default function PromoteBannerPage() {
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
       />
+
+      {showPaymentPopup && pendingPaymentBanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 text-center">
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Plan Limit Reached!</h2>
+            <p className="text-gray-600 mb-6">
+              You have exhausted your free banner limits for this month. 
+              To activate this extra banner, you need to pay <strong className="text-indigo-600">Rs. {pendingPaymentBanner.totalPrice}</strong>.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => router.push("/merchant/banners")}
+                className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-medium hover:bg-gray-200 transition-colors"
+              >
+                Pay Later
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    setSubmitting(true);
+                    const { payForBannerPromotion } = await import('../../../lib/api');
+                    await payForBannerPromotion(pendingPaymentBanner.requestId, `PAY_${Date.now()}`);
+                    setShowPaymentPopup(false);
+                    setSubmitMessage("Payment successful! Banner is now under review.");
+                    setTimeout(() => router.push("/merchant/banners"), 1500);
+                  } catch (err) {
+                    setSubmitError("Payment failed. Please try again.");
+                    setSubmitting(false);
+                  }
+                }}
+                disabled={submitting}
+                className="flex-1 py-2 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Processing..." : "Pay Now"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="bg-[#e8ad2f] border-t border-[#d49b22] text-[#1b1b1b] px-4 py-4 lg:bg-[#f0b330] lg:px-8 lg:py-7 mt-4 lg:mt-6">
         <div className="max-w-[1500px] mx-auto flex flex-col lg:flex-row gap-8 lg:gap-12 items-start justify-between">
