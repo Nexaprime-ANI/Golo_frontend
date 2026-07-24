@@ -8,7 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 import MerchantNavbar from "../MerchantNavbar";
 import { getMerchantOrders, getMerchantOrderStats, updateMerchantOrderStatus } from "../../lib/api";
 
-const FALLBACK_AVATAR = "/images/place2.avif";
+const FALLBACK_AVATAR = "/images/placeholder.webp";
 
 function getSafeAvatarSrc(src) {
   const value = String(src || "").trim();
@@ -376,3 +376,4 @@ export default function MerchantOrdersPage() {
     </Suspense>
   );
 }
+

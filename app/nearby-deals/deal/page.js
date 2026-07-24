@@ -666,7 +666,7 @@ function NearbyDealDetailsContent() {
             {/* Image */}
             <div className="relative overflow-hidden rounded-xl bg-[#f0f0f0]">
               <SafeImage
-                src={offer?.imageUrl || "/images/deal2.avif"}
+                src={offer?.imageUrl || "/images/placeholder.webp"}
                 alt={offer?.title || "Offer"}
                 width={600}
                 height={400}
@@ -887,7 +887,7 @@ function NearbyDealDetailsContent() {
                         <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-[#e5e7eb] bg-[#f3f4f6]">
                           <SafeImage
                             src={
-                              item?.imageUrl || "/images/deal2.avif"
+                              item?.imageUrl || "/images/placeholder.webp"
                             }
                             alt={item?.productName || "Product"}
                             fill
@@ -962,7 +962,7 @@ function NearbyDealDetailsContent() {
               <div className="w-12 h-12 rounded-full overflow-hidden bg-[#f0f0f0] flex-shrink-0">
                 <SafeImage
                   src={
-                    offer?.merchant?.profilePhoto || "/images/place2.avif"
+                    offer?.merchant?.profilePhoto || "/images/placeholder.webp"
                   }
                   alt={offer?.merchant?.name || "Store"}
                   width={48}
@@ -1327,7 +1327,7 @@ function NearbyDealDetailsContent() {
                 >
                   <div className="relative h-40 bg-[#f0f0f0] overflow-hidden">
                     <Image
-                      src={item?.imageUrl || "/images/deal2.avif"}
+                      src={item?.imageUrl || "/images/placeholder.webp"}
                       alt={item?.title || "Deal"}
                       fill
                       className="object-cover hover:scale-105 transition"
@@ -1364,3 +1364,4 @@ function NearbyDealDetailsContent() {
     </main>
   );
 }
+

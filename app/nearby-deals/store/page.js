@@ -367,7 +367,7 @@ function NearbyStoreContent() {
     products.find((item) => item?.image || item?.imageUrl)?.image ||
     products.find((item) => item?.image || item?.imageUrl)?.imageUrl ||
     merchant?.profilePhoto ||
-    "/images/place2.avif";
+    "/images/placeholder.webp";
 
   return (
     <main className="relative z-10 min-h-screen bg-transparent">
@@ -541,7 +541,7 @@ function NearbyStoreContent() {
                               >
                                 <div className="relative h-40 overflow-hidden bg-[#f8fafc]">
                                   <Image
-                                    src={offer?.imageUrl || "/images/deal2.avif"}
+                                    src={offer?.imageUrl || "/images/placeholder.webp"}
                                     alt={offer?.title || "Offer"}
                                     fill
                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -591,7 +591,7 @@ function NearbyStoreContent() {
                               <div className="group bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden hover:shadow-lg hover:border-[#157a4f] transition-all duration-300 flex flex-col h-full">
                                 <div className="relative h-40 overflow-hidden bg-[#f8fafc]">
                                   <Image
-                                    src={product?.image || product?.imageUrl || "/images/place2.avif"}
+                                    src={product?.image || product?.imageUrl || "/images/placeholder.webp"}
                                     alt={product?.name || "Product"}
                                     fill
                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -655,7 +655,7 @@ function NearbyStoreContent() {
                               >
                                 <div className="relative h-40 overflow-hidden">
                                   <Image
-                                    src={offer?.imageUrl || "/images/deal2.avif"}
+                                    src={offer?.imageUrl || "/images/placeholder.webp"}
                                     alt={offer?.title || "Offer"}
                                     fill
                                     className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -701,3 +701,4 @@ function NearbyStoreContent() {
     </main>
   );
 }
+

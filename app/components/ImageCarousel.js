@@ -31,7 +31,7 @@ function SafeImage({
 
   return (
     <Image
-      src={src || "/images/deal2.avif"}
+      src={src || "/images/placeholder.webp"}
       alt={alt}
       fill={fill}
       className={className}
@@ -261,3 +261,4 @@ export default function ImageCarousel({ images = [], videoUrl = null, alt = "Pro
     </div>
   );
 }
+

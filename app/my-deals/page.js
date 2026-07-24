@@ -252,7 +252,7 @@ export default function MyDeals() {
                     <div className="relative h-[132px] bg-[#f3efe5] overflow-hidden">
                       <Image
                         src={
-                          deal.offerImage || deal.image || "/images/deal2.avif"
+                          deal.offerImage || deal.image || "/images/placeholder.webp"
                         }
                         alt={deal.offerTitle || "Deal Image"}
                         fill
@@ -410,7 +410,7 @@ export default function MyDeals() {
               <section className="rounded-[12px] border border-[#e8e8e8] bg-white shadow-sm overflow-hidden">
                 <div className="relative h-[205px]">
                   <Image
-                    src="/images/place2.avif"
+                    src="/images/placeholder.webp"
                     alt="Signature Wellness Day"
                     fill
                     className="object-cover"
@@ -443,3 +443,4 @@ export default function MyDeals() {
     </>
   );
 }
+

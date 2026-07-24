@@ -23,13 +23,13 @@ const latestReviews = [
     name: "Rahul K.",
     time: "Yesterday",
     text: "Best local store on Golo. Prices are reasonable and the food is always fresh!",
-    avatar: "/images/banner3.avif",
+    avatar: "/images/placeholder.webp",
   },
   {
     name: "Anjali S.",
     time: "2 days ago",
     text: "Love the Moon Cafe vibes. The packaging was neat and eco-friendly.",
-    avatar: "/images/place2.avif",
+    avatar: "/images/placeholder.webp",
   },
 ];
 
@@ -224,7 +224,7 @@ function MerchantDashboardContent() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-start gap-4">
                 <div className="h-12 w-12 rounded-full overflow-hidden border border-[#dadada] lg:h-14 lg:w-14">
-                  <Image src={storeAvatar || "/images/deal2.avif"} alt={merchantProfile?.shopName || merchantProfile?.storeName || user?.shopName || "My Store"} width={56} height={56} className="h-full w-full object-cover" />
+                  <Image src={storeAvatar || "/images/placeholder.webp"} alt={merchantProfile?.shopName || merchantProfile?.storeName || user?.shopName || "My Store"} width={56} height={56} className="h-full w-full object-cover" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-[9px] text-[#737373]">Open Now • Last updated {Math.floor((new Date() - lastUpdated) / 60000)} mins ago</p>
@@ -388,7 +388,7 @@ function MerchantDashboardContent() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <div className="h-7 w-7 rounded-full overflow-hidden border border-[#ddd]">
-                          <Image src={review.avatar || "/images/place2.avif"} alt={review.name || "Customer"} width={28} height={28} className="h-full w-full object-cover" />
+                          <Image src={review.avatar || "/images/placeholder.webp"} alt={review.name || "Customer"} width={28} height={28} className="h-full w-full object-cover" />
                         </div>
                         <div>
                           <p className="text-[13px] font-semibold">{review.name || review.userName || "Customer"}</p>
@@ -438,3 +438,4 @@ export default function MerchantDashboardPage() {
     </Suspense>
   );
 }
+

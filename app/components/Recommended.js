@@ -369,7 +369,7 @@ export default function Recommended() {
                     alt={deal.title}
                     className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                     loading="lazy"
-                    onError={(e) => { e.currentTarget.src = "/images/deal2.avif"; }}
+                    onError={(e) => { e.currentTarget.src = "/images/placeholder.webp"; }}
                   />
                   <span className="absolute left-2 top-2 rounded-full bg-gradient-to-r from-[#157A4F] to-[#28A745] px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">
                     Recommended
@@ -402,3 +402,4 @@ export default function Recommended() {
     </section>
   );
 }
+

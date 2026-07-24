@@ -8,13 +8,13 @@ import { useAuth } from "../../context/AuthContext";
 import MerchantNavbar from "../MerchantNavbar";
 
 const inventoryProducts = [
-  { id: 1, name: "Shirts", price: "₹240", stock: 45, image: "/images/deal2.avif" },
-  { id: 2, name: "Pants", price: "₹299", stock: 8, image: "/images/place2.avif" },
-  { id: 3, name: "Skirts", price: "₹550", stock: 0, image: "/images/banner3.avif" },
-  { id: 4, name: "Dress", price: "₹1000", stock: 22, image: "/images/deal2.avif" },
-  { id: 5, name: "T - Shirt", price: "₹320", stock: 124, image: "/images/place2.avif" },
-  { id: 6, name: "Shirts", price: "₹240", stock: 45, image: "/images/deal2.avif" },
-  { id: 7, name: "Skirts", price: "₹550", stock: 0, image: "/images/banner3.avif" },
+  { id: 1, name: "Shirts", price: "₹240", stock: 45, image: "/images/placeholder.webp" },
+  { id: 2, name: "Pants", price: "₹299", stock: 8, image: "/images/placeholder.webp" },
+  { id: 3, name: "Skirts", price: "₹550", stock: 0, image: "/images/placeholder.webp" },
+  { id: 4, name: "Dress", price: "₹1000", stock: 22, image: "/images/placeholder.webp" },
+  { id: 5, name: "T - Shirt", price: "₹320", stock: 124, image: "/images/placeholder.webp" },
+  { id: 6, name: "Shirts", price: "₹240", stock: 45, image: "/images/placeholder.webp" },
+  { id: 7, name: "Skirts", price: "₹550", stock: 0, image: "/images/placeholder.webp" },
 ];
 
 export default function AddNewListingPage() {
@@ -385,3 +385,4 @@ export default function AddNewListingPage() {
     </div>
   );
 }
+

@@ -347,9 +347,10 @@ export async function refreshTokenApi() {
     });
 }
 
-export async function logoutUser() {
+export async function logoutUser(refreshToken = '') {
     return apiClient('/users/logout', {
         method: 'POST',
+        body: JSON.stringify({ refreshToken }),
     });
 }
 
@@ -753,6 +754,10 @@ export async function payForBannerPromotion(requestId, paymentReference) {
         method: 'POST',
         body: JSON.stringify({ paymentReference }),
     });
+}
+
+export async function checkBannerAvailability(city = 'global') {
+    return apiClient(`/banners/promotions/check-availability?city=${encodeURIComponent(city)}`);
 }
 
 export async function getActiveHomepageBanners(limit = 5) {

@@ -286,7 +286,7 @@ export default function MerchantProductsPage() {
                     <tr key={item.id} className="border-t border-[#f0f0f0]">
                       <td className="px-4 py-3">
                         <div className="h-8 w-8 rounded-full overflow-hidden border border-[#ececec]">
-                          <Image src={item.image || "/images/deal2.avif"} alt={item.name} width={32} height={32} className="h-full w-full object-cover" />
+                          <Image src={item.image || "/images/placeholder.webp"} alt={item.name} width={32} height={32} className="h-full w-full object-cover" />
                         </div>
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#2a2a2a]">{item.name}</td>
@@ -381,3 +381,4 @@ export default function MerchantProductsPage() {
     </div>
   );
 }
+

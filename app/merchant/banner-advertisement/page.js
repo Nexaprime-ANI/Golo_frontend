@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import {
+  checkBannerAvailability,
   deleteMyBannerPromotion,
   getMyBannerPromotions,
   submitBannerPromotionRequest,
@@ -47,6 +48,7 @@ export default function MerchantBannerAdvertisementPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
+  const [slotsFullModal, setSlotsFullModal] = useState({ open: false, message: "" });
 
   const loadBanners = async () => {
     try {
@@ -96,6 +98,19 @@ export default function MerchantBannerAdvertisementPage() {
   }, [banners]);
 
   const addBanner = async () => {
+    try {
+      const avail = await checkBannerAvailability("global");
+      if (avail?.data && !avail.data.available) {
+        setSlotsFullModal({
+          open: true,
+          message: avail.data.message || "Slots are full for the day! The maximum limit of 200 active banner slots has been reached for this city. Please select another date or city.",
+        });
+        return;
+      }
+    } catch (e) {
+      console.warn("Failed availability check:", e);
+    }
+
     const bannerTitle = window.prompt("Banner title");
     if (!bannerTitle) return;
     const bannerCategory = window.prompt("Banner category", "Promotion") || "Promotion";
@@ -109,7 +124,15 @@ export default function MerchantBannerAdvertisementPage() {
       await submitBannerPromotionRequest({ bannerTitle, bannerCategory, imageUrl, selectedDates, totalPrice: 0 });
       await loadBanners();
     } catch (err) {
-      setError(err?.message || "Failed to create campaign");
+      const errMsg = err?.data?.message || err?.message || "";
+      if (errMsg.toLowerCase().includes("slots are full")) {
+        setSlotsFullModal({
+          open: true,
+          message: errMsg || "Slots are full for the day! The maximum limit of 200 active banner slots has been reached.",
+        });
+      } else {
+        setError(errMsg || "Failed to create campaign");
+      }
     }
   };
 
@@ -299,8 +322,29 @@ export default function MerchantBannerAdvertisementPage() {
           </div>
           <div className="flex items-center gap-2">
             <span>© 2026 Golo. All rights reserved.</span>
+        {/* Slots Full Warning Modal */}
+        {slotsFullModal.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-amber-200 text-center">
+              <div className="mx-auto w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mb-4 text-amber-600">
+                <ShieldAlert className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Slots Are Full For The Day!</h3>
+              <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+                {slotsFullModal.message || "The maximum limit of 200 active banner slots has been reached for this city. Please select another date or target city."}
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSlotsFullModal({ open: false, message: "" })}
+                  className="w-full py-2.5 px-4 bg-[#157A4F] hover:bg-[#11623f] text-white font-semibold rounded-xl text-sm transition-all shadow-md active:scale-95"
+                >
+                  Choose Another Date or City
+                </button>
+              </div>
+            </div>
           </div>
-        </footer>
+        )}
       </div>
     </div>
   );

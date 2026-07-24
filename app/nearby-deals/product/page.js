@@ -34,7 +34,7 @@ function isLocalImageUri(src) {
 }
 
 function SafeImage({ src, alt = "", width, height, className = "", ...rest }) {
-  const safeSrc = src || "/images/place2.avif";
+  const safeSrc = src || "/images/placeholder.webp";
   if (isLocalImageUri(safeSrc)) {
     return <img src={safeSrc} alt={alt} className={className} {...rest} />;
   }
@@ -348,7 +348,7 @@ function ProductDetailContent() {
   const productName = product?.productName || product?.name || "Product";
   const productPrice = Number(product?.offerPrice || product?.price || 0);
   const originalPrice = Number(product?.originalPrice || 0);
-  const productImages = product?.images && product.images.length > 0 ? product.images : [product?.imageUrl || product?.image || "/images/deal2.avif"];
+  const productImages = product?.images && product.images.length > 0 ? product.images : [product?.imageUrl || product?.image || "/images/placeholder.webp"];
   const productVideo = product?.videoUrl || null;
   const productDescription = product?.description || "Description unavailable.";
   const safeStock = Number(product?.stockQuantity ?? 0);
@@ -372,7 +372,7 @@ function ProductDetailContent() {
     merchantProfile?.profilePhoto ||
     merchant?.shopPhoto ||
     merchantProfile?.shopPhoto ||
-    "/images/place2.avif";
+    "/images/placeholder.webp";
   const merchantBio =
     merchant?.bio ||
     merchantProfile?.bio ||
@@ -810,3 +810,4 @@ function ProductDetailContent() {
     </main>
   );
 }
+

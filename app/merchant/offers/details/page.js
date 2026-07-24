@@ -420,7 +420,7 @@ function MerchantOfferDetailsContent() {
                     <div className="rounded-[22px] border border-[#edf0f4] bg-[#f8fbfa] p-3">
                       <div className="relative h-[320px] overflow-hidden rounded-[18px] border border-[#edf0f4] bg-white">
                         {formData.imageUrl ? (
-                          <Image src={formData.imageUrl} alt={formData.title || "Offer"} fill className="object-cover" />
+                          <Image src={formData.imageUrl} alt={formData.title || "Offer"} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center bg-[#f6f7f8] text-center text-[13px] text-[#667085]">
                             No offer image selected
@@ -503,7 +503,7 @@ function MerchantOfferDetailsContent() {
                       {selectedProducts.length ? selectedProducts.map((item) => (
                         <div key={item.productId} className="flex items-center gap-3 rounded-[14px] border border-[#edf0f4] bg-[#f8fbfa] p-3">
                           <div className="relative h-14 w-14 overflow-hidden rounded-[12px] border border-[#edf0f4] bg-white">
-                            <Image src={item.imageUrl || "/images/deal2.avif"} alt={item.productName} fill className="object-cover" />
+                            <Image src={item.imageUrl || "/images/placeholder.webp"} alt={item.productName} fill sizes="56px" className="object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-[13px] font-semibold text-[#1e1e1e]">{item.productName}</p>
@@ -571,3 +571,4 @@ function MerchantOfferDetailsContent() {
     </div>
   );
 }
+

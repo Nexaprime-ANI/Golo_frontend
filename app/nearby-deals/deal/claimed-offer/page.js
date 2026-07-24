@@ -21,8 +21,8 @@ function pickLiveImage(...candidates) {
     const value = String(candidate || "").trim();
     if (!value) continue;
     if (
-      value === "/images/deal2.avif" ||
-      value === "/images/place2.avif" ||
+      value === "/images/placeholder.webp" ||
+      value === "/images/placeholder.webp" ||
       value === "/images/deal1.jpg" ||
       value === "/images/placeholder.webp"
     ) continue;
@@ -547,7 +547,7 @@ function ClaimedOfferContent() {
       merchantProfile?.merchantProfile?.profilePhoto,
       offerDetails?.merchant?.profilePhoto,
       offerDetails?.merchant?.shopPhoto
-    ) || "/images/place2.avif";
+    ) || "/images/placeholder.webp";
   const selectedProductOfferImage = pickLiveImageFromProducts(offerDetails?.selectedProducts);
   const resolvedOfferImage =
     pickLiveImage(
@@ -560,7 +560,7 @@ function ClaimedOfferContent() {
       selectedVoucher?.image,
       selectedVoucher?.productImage,
       merchantProfile?.shopPhoto
-    ) || resolvedMerchantAvatar || "/images/place2.avif";
+    ) || resolvedMerchantAvatar || "/images/placeholder.webp";
 
   return (
     <main className="min-h-screen bg-[#f3f3f3]">
@@ -785,3 +785,4 @@ function ClaimedOfferContent() {
     </main>
   );
 }
+

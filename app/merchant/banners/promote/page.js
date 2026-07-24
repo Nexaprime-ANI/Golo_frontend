@@ -105,6 +105,11 @@ export default function PromoteBannerPage() {
       return;
     }
 
+    if (selectedDates.length > 7) {
+      setSubmitError("A banner can be active for a maximum of 7 days.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       let finalImageUrl = bannerPreview;
@@ -115,10 +120,14 @@ export default function PromoteBannerPage() {
         const { uploadToCloudinary } = await import('../../../services/cloudinaryConfig');
         try {
           const uploadedData = await uploadToCloudinary(bannerFile);
-          finalImageUrl = uploadedData.url;
+          finalImageUrl = uploadedData.secure_url || uploadedData.url;
         } catch (uploadError) {
           throw new Error("Failed to upload image securely to the cloud. Please try again.");
         }
+      }
+
+      if (!finalImageUrl || finalImageUrl.startsWith('data:image')) {
+        throw new Error("Invalid image URL. Please select and upload a valid image file.");
       }
 
       setSubmitMessage("Analyzing banner for safety compliance...");
@@ -340,6 +349,10 @@ export default function PromoteBannerPage() {
                                     if (isSelected) {
                                       setSelectedDates(selectedDates.filter((d) => d !== dateStr));
                                     } else {
+                                      if (selectedDates.length >= 7) {
+                                        alert("You can only select up to 7 days for a banner.");
+                                        return;
+                                      }
                                       setSelectedDates([...selectedDates, dateStr].sort());
                                     }
                                   }}

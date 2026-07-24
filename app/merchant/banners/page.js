@@ -253,7 +253,7 @@ export default function MerchantBannersPage() {
                     <tr key={row.requestId} className="border-t border-[#f0f0f0]">
                       <td className="px-4 py-3">
                         <div className="h-8 w-8 rounded-full overflow-hidden border border-[#ececec]">
-                          <Image src={row.imageUrl || "/images/banner3.avif"} alt={row.bannerTitle} width={32} height={32} className="h-full w-full object-cover" />
+                          <Image src={row.imageUrl || "/images/placeholder.webp"} alt={row.bannerTitle} width={32} height={32} className="h-full w-full object-cover" />
                         </div>
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#2a2a2a]">{row.bannerTitle}</td>
@@ -362,3 +362,4 @@ export default function MerchantBannersPage() {
     </div>
   );
 }
+

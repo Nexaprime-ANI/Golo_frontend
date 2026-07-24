@@ -17,7 +17,7 @@ const ratingBars = [
 const reviews = [
   {
     name: "Sarah Johnson",
-    avatar: "/images/place2.avif",
+    avatar: "/images/placeholder.webp",
     rating: 5,
     date: "2 days ago",
     likes: 12,
@@ -25,7 +25,7 @@ const reviews = [
   },
   {
     name: "Marcus Chen",
-    avatar: "/images/banner3.avif",
+    avatar: "/images/placeholder.webp",
     rating: 4,
     date: "1 week ago",
     likes: 5,
@@ -33,7 +33,7 @@ const reviews = [
   },
   {
     name: "Elena Rodriguez",
-    avatar: "/images/deal2.avif",
+    avatar: "/images/placeholder.webp",
     rating: 5,
     date: "Oct 24, 2024",
     likes: 28,
@@ -61,7 +61,7 @@ export default function RatingsReviewsPage() {
                 <div className="flex flex-wrap items-start gap-4">
                   <div className="h-16 w-16 overflow-hidden rounded-[10px] border border-[#d79f20] bg-[#2f3236] p-0.5">
                     <div className="relative h-full w-full overflow-hidden rounded-[8px]">
-                      <Image src="/images/banner3.avif" alt="The Gourmet Bistro" fill className="object-cover" />
+                      <Image src="/images/placeholder.webp" alt="The Gourmet Bistro" fill className="object-cover" />
                     </div>
                   </div>
 
@@ -172,7 +172,7 @@ export default function RatingsReviewsPage() {
                 </div>
 
                 <div className="mt-3 relative h-[120px] overflow-hidden rounded-[10px] border border-[#ececec] bg-[#f5f5f5]">
-                  <Image src="/images/banner3.avif" alt="Store location map" fill className="object-cover" />
+                  <Image src="/images/placeholder.webp" alt="Store location map" fill className="object-cover" />
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -190,7 +190,7 @@ export default function RatingsReviewsPage() {
                 <div className="mt-3 rounded-[10px] border border-[#ececec] bg-[#fbfbfb] p-2">
                   <div className="flex gap-2">
                     <div className="relative h-12 w-16 overflow-hidden rounded-[6px] border border-[#ececec]">
-                      <Image src="/images/deal2.avif" alt="Claimed deal" fill className="object-cover" />
+                      <Image src="/images/placeholder.webp" alt="Claimed deal" fill className="object-cover" />
                     </div>
                     <div>
                       <p className="text-[12px] font-semibold text-[#222]">50% Off Signature Tasting Menu</p>
@@ -234,3 +234,4 @@ export default function RatingsReviewsPage() {
     </>
   );
 }
+

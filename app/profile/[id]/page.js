@@ -194,7 +194,7 @@ export default function UserProfile({ params }) {
                       {!isTextOnlyAd ? (
                         <div className="relative h-52 overflow-hidden bg-[#f4f6f8]">
                           <Image
-                            src={getAdImage(ad) || "/images/deal2.avif"}
+                            src={getAdImage(ad) || "/images/placeholder.webp"}
                             alt={ad?.title || "Ad"}
                             fill
                             className="object-cover transition duration-500 group-hover:scale-105"

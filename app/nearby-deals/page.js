@@ -1095,7 +1095,7 @@ function NearbyDealsPageContent() {
                   >
                     <div className="relative h-44 w-full overflow-hidden bg-gray-100 sm:h-36">
                       <img
-                        src={deal.imageUrl || "/images/deal2.avif"}
+                        src={deal.imageUrl || "/images/placeholder.webp"}
                         alt={deal.title}
                         className="h-full w-full object-cover"
                       />
@@ -1211,3 +1211,4 @@ export default function NearbyDealsPage() {
     </Suspense>
   );
 }
+

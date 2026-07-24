@@ -239,7 +239,7 @@ export default function MerchantAnalyticsPage() {
     merchantProfile?.profilePhoto ||
     merchantProfile?.shopPhoto ||
     user?.profilePhoto ||
-    "/images/place2.avif";
+    "/images/placeholder.webp";
 
   return (
     <div className="min-h-screen bg-[#ececec] text-[#1b1b1b]" style={{ fontFamily: "Inter, system-ui, sans-serif" }}>
@@ -528,3 +528,4 @@ function LocationRow({ name, value }) {
     </div>
   );
 }
+

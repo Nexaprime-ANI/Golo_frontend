@@ -7,6 +7,7 @@ import {
     registerUser,
     logoutUser,
     getProfile,
+    getStoredRefreshToken,
     updateMerchantStoreLocation,
     setStoredAuthTokens,
     clearStoredAuthTokens,
@@ -144,7 +145,7 @@ export function AuthProvider({ children }) {
 
     const logout = useCallback(async () => {
         try {
-            await logoutUser();
+            await logoutUser(getStoredRefreshToken());
         } catch {
             // Logout from server failed, but still clear local state
         }

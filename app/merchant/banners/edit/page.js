@@ -293,7 +293,7 @@ function MerchantBannerEditContent() {
                     <div className="mt-4 overflow-hidden rounded-[18px] border border-[#eadfb6] bg-white">
                       <div className="relative h-40 w-full bg-[#f7f4ea]">
                         {formData.imageUrl ? (
-                          <Image src={formData.imageUrl} alt={formData.bannerTitle || "Banner preview"} fill className="object-cover" />
+                          <Image src={formData.imageUrl} alt={formData.bannerTitle || "Banner preview"} fill sizes="(max-width: 768px) 100vw, 600px" className="object-cover" />
                         ) : (
                           <div className="flex h-full items-center justify-center text-[12px] text-[#8a8a8a]">Add an image URL to preview the banner</div>
                         )}

@@ -86,9 +86,9 @@ export default function Hero() {
   useEffect(() => {
     let isMounted = true;
 
-    async function loadHomepageBanners() {
+    async function loadHomepageBanners(isSilent = false) {
       try {
-        if (isMounted) {
+        if (isMounted && !isSilent) {
           setLoading(true);
         }
 
@@ -108,7 +108,6 @@ export default function Hero() {
             : [];
 
         if (process.env.NODE_ENV !== "production") {
-          // Helps quickly confirm if backend is returning data at all.
           console.log("[Hero] Active banners response:", res);
           console.log("[Hero] Active banners rows:", rows);
         }
@@ -135,30 +134,47 @@ export default function Hero() {
         if (isMounted) {
           if (dynamicSlides.length > 0) {
             const finalSlides = dynamicSlides.slice(0, MAX_SLIDES);
-            setSlides(finalSlides);
+            // Check if slides have changed to avoid unnecessary re-renders
+            setSlides((prevSlides) => {
+              const prevUrls = prevSlides.map((s) => s.url).join(",");
+              const nextUrls = finalSlides.map((s) => s.url).join(",");
+              if (prevUrls !== nextUrls) {
+                return finalSlides;
+              }
+              return prevSlides;
+            });
             setDebugInfo(`Showing ${finalSlides.length} approved banners`);
-            setCurrent(0);
+            if (!isSilent) {
+              setCurrent(0);
+            }
           } else {
             setSlides([]);
             setDebugInfo("No approved banners found");
           }
         }
       } catch (error) {
-        if (isMounted) {
+        if (isMounted && !isSilent) {
           console.error("[Hero] Error loading approved banners:", error);
           setDebugInfo(`Error: ${error?.message || "Failed to load banners"}`);
           setSlides([]);
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && !isSilent) {
           setLoading(false);
         }
       }
     }
 
     loadHomepageBanners();
+
+    // Silent background poller to fetch real-time rotated backend slots every 30 seconds
+    const pollInterval = setInterval(() => {
+      loadHomepageBanners(true);
+    }, 30000);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
     };
   }, []);
 

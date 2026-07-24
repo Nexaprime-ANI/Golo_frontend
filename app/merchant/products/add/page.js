@@ -36,7 +36,7 @@ function pickStoreImage(user, merchantProfile) {
     merchantProfile?.shopPhoto ||
     user?.profilePhoto ||
     user?.shopPhoto ||
-    "/images/deal2.avif"
+    "/images/placeholder.webp"
   );
 }
 
@@ -513,3 +513,4 @@ export default function AddProductPage() {
     </div>
   );
 }
+
