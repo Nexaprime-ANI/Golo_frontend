@@ -322,6 +322,9 @@ export default function MerchantBannerAdvertisementPage() {
           </div>
           <div className="flex items-center gap-2">
             <span>© 2026 Golo. All rights reserved.</span>
+          </div>
+        </footer>
+        
         {/* Slots Full Warning Modal */}
         {slotsFullModal.open && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
