@@ -14,7 +14,7 @@ export default function MerchantProductDetailsContent() {
   const searchParams = useSearchParams();
   const productId = searchParams.get("id");
   const { user, loading, logout } = useAuth();
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(searchParams.get("edit") === "true");
   const [isFetching, setIsFetching] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [originalData, setOriginalData] = useState(null);
@@ -280,14 +280,6 @@ export default function MerchantProductDetailsContent() {
             ) : null}
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-[35px] font-semibold leading-none">Product Details</h1>
-              {!isEditMode && (
-                <button
-                  onClick={handleEditClick}
-                  className="inline-flex h-11 items-center gap-2 rounded-[12px] border border-[#157a4f] bg-white px-5 text-[13px] font-semibold text-[#157a4f] shadow-sm transition hover:bg-[#f4fbf7]"
-                >
-                  Edit Product <Pencil size={13} />
-                </button>
-              )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

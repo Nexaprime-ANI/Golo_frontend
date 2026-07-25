@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Eye, Package, Plus, Search, Trash2, User, Wallet } from "lucide-react";
+import { Download, Eye, Package, Plus, Search, Trash2, User, Wallet, X, Pencil } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useRoleProtection, LoadingScreen } from "../../components/RoleBasedRedirect";
 import { deleteMerchantProduct, getMerchantProducts } from "../../lib/api";
@@ -14,6 +14,24 @@ export default function MerchantProductsPage() {
   const { user, logout } = useAuth();
   const { isLoading, isAuthorized } = useRoleProtection("merchant");
   const [products, setProducts] = useState([]);
+  const [isAllProductsModalOpen, setIsAllProductsModalOpen] = useState(false);
+  const [activationConfirmProduct, setActivationConfirmProduct] = useState(null);
+
+  const isProductFrozen = (item) => {
+    if (item.isActive === false || !item.lastActivatedAt) return false;
+    const freezePeriodMs = 30 * 24 * 60 * 60 * 1000;
+    const timeSinceActivation = Date.now() - new Date(item.lastActivatedAt).getTime();
+    return timeSinceActivation < freezePeriodMs;
+  };
+
+  const handleToggleClick = (item) => {
+    if (isProductFrozen(item)) return;
+    if (item.isActive === false) {
+      setActivationConfirmProduct(item);
+    } else {
+      handleToggleActive(item.id, item.isActive !== false);
+    }
+  };
   const [stats, setStats] = useState({
     totalProducts: 0,
     inventoryValue: 0,
@@ -164,6 +182,20 @@ export default function MerchantProductsPage() {
     }
   };
 
+  const handleToggleActive = async (productId, currentIsActive) => {
+    try {
+      const { toggleProductActiveStatus } = await import("../../lib/api");
+      const res = await toggleProductActiveStatus(productId, !currentIsActive);
+      if (res?.data) {
+        setProducts((prev) => prev.map(p => p.id === productId ? res.data : p));
+      }
+    } catch (error) {
+      window.alert(error?.message || "Failed to toggle status");
+    }
+  };
+
+  const displayedProducts = products.filter((item) => item.isActive !== false);
+
   const inventoryValueLabel = useMemo(() => {
     const value = Number(stats?.inventoryValue || 0);
     return `Rs ${Math.round(value).toLocaleString("en-IN")}`;
@@ -184,7 +216,7 @@ export default function MerchantProductsPage() {
       <main className="w-full px-8 lg:px-10 py-6">
         <div className="mx-auto w-full max-w-[1400px] space-y-5">
           <section>
-            <h1 className="text-[42px] font-semibold leading-none text-[#1e1e1e]">Product Inventory</h1>
+            <h1 className="text-[42px] font-semibold leading-none text-[#1e1e1e]">Active Products</h1>
             <p className="mt-3 text-[13px] text-[#6f6f6f] max-w-[500px]">
               Manage your product catalog, monitor stock levels, and update pricing.
             </p>
@@ -261,8 +293,11 @@ export default function MerchantProductsPage() {
                 >
                   Apply Search
                 </button>
-                <button onClick={() => router.push("/merchant/products/add")} className="h-9 rounded-[8px] bg-[#2f9e58] px-4 text-[11px] font-semibold text-white inline-flex items-center gap-1.5">
-                  <Plus size={12} /> Add New Product
+                <button
+                  onClick={() => setIsAllProductsModalOpen(true)}
+                  className="h-9 rounded-[8px] border border-[#2f9e58] bg-[#eefaf2] px-4 text-[11px] font-semibold text-[#2f9e58]"
+                >
+                  See All Products
                 </button>
               </div>
             </div>
@@ -282,7 +317,7 @@ export default function MerchantProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map((item) => (
+                  {displayedProducts.map((item) => (
                     <tr key={item.id} className="border-t border-[#f0f0f0]">
                       <td className="px-4 py-3">
                         <div className="h-8 w-8 rounded-full overflow-hidden border border-[#ececec]">
@@ -290,7 +325,7 @@ export default function MerchantProductsPage() {
                         </div>
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#2a2a2a]">{item.name}</td>
-                      <td className="px-4 py-3 font-semibold">{item.priceLabel || `?${item.price}`}</td>
+                      <td className="px-4 py-3 font-semibold">{item.priceLabel || `₹${item.price}`}</td>
                       <td className="px-4 py-3">
                         {item.status === "Out of Stock" ? (
                           <span className="inline-flex rounded-full bg-[#ef4d4d] px-2 py-0.5 text-[10px] font-semibold text-white">Out of Stock</span>
@@ -314,19 +349,13 @@ export default function MerchantProductsPage() {
                         >
                           <Eye size={12} /> View
                         </button>
-                        <span className="mx-2 text-[#cfcfcf]">/</span>
-                        <button onClick={() => handleDeleteProduct(item.id)} className="text-[#ef4d4d] font-semibold">
-                          <span className="inline-flex items-center gap-1 rounded-[6px] border border-[#f0c6c6] bg-[#fff0f0] px-3 py-1 text-[#d63f3f] font-semibold">
-                            <Trash2 size={12} /> Delete
-                          </span>
-                        </button>
                       </td>
                     </tr>
                   ))}
-                  {!isFetching && products.length === 0 ? (
+                  {!isFetching && displayedProducts.length === 0 ? (
                     <tr className="border-t border-[#f0f0f0]">
                       <td colSpan={6} className="px-4 py-6 text-center text-[12px] text-[#777]">
-                        No products found
+                        No active products found
                       </td>
                     </tr>
                   ) : null}
@@ -334,7 +363,7 @@ export default function MerchantProductsPage() {
               </table>
 
               <div className="flex items-center justify-between border-t border-[#ececec] bg-[#f2f3f5] px-4 py-3 text-[11px] text-[#666]">
-                <p>Showing {products.length} of {pagination.total || 0} products</p>
+                <p>Showing {displayedProducts.length} active products</p>
                 <div className="flex items-center gap-1">
                   <button
                     disabled={page <= 1}
@@ -376,9 +405,137 @@ export default function MerchantProductsPage() {
             <div className="mt-2 space-y-1 text-[12px] lg:mt-3 lg:space-y-2 lg:text-[13px]"><p>Help Center</p><p>Security</p><p>Terms of Service</p></div>
           </div>
         </div>
-        <div className="mx-auto w-full max-w-[1400px] px-4 py-2 border-t border-[#d49b22] flex items-center justify-between gap-3 text-[10px] lg:px-10 lg:py-3 lg:text-[11px]"><p>� 2026 GOLO Dashboard. All rights reserved.</p></div>
+        <div className="mx-auto w-full max-w-[1400px] px-4 py-2 border-t border-[#d49b22] flex items-center justify-between gap-3 text-[10px] lg:px-10 lg:py-3 lg:text-[11px]"><p>© 2026 GOLO Dashboard. All rights reserved.</p></div>
       </footer>
+
+      {isAllProductsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-4xl max-h-[85vh] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gray-50">
+              <h2 className="text-lg font-bold text-gray-800">All Products Inventory</h2>
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => router.push("/merchant/products/add")} 
+                  className="h-8 rounded-[6px] bg-[#2f9e58] px-3 text-[11px] font-semibold text-white inline-flex items-center gap-1.5 hover:bg-[#28894b] transition-colors"
+                >
+                  <Plus size={12} /> Add New Product
+                </button>
+                <button
+                  onClick={() => setIsAllProductsModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              <table className="w-full text-[12px] text-left">
+                <thead className="bg-[#f2f3f5] text-[#666] sticky top-0 z-10">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Image</th>
+                    <th className="px-4 py-3 font-semibold">Product Name</th>
+                    <th className="px-4 py-3 font-semibold">Price</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Active</th>
+                    <th className="px-4 py-3 font-semibold">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {products.map((item) => (
+                    <tr key={item.id} className="border-t border-[#f0f0f0] hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <div className="h-8 w-8 rounded-full overflow-hidden border border-[#ececec]">
+                          <Image src={item.image || "/images/placeholder.webp"} alt={item.name} width={32} height={32} className="h-full w-full object-cover" />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-[#2a2a2a]">{item.name}</td>
+                      <td className="px-4 py-3 font-semibold">{item.priceLabel || `₹${item.price}`}</td>
+                      <td className="px-4 py-3">
+                        {item.status === "Out of Stock" ? (
+                          <span className="inline-flex rounded-full bg-[#ef4d4d] px-2 py-0.5 text-[10px] font-semibold text-white">Out of Stock</span>
+                        ) : (
+                          <span>{item.status}</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          disabled={isProductFrozen(item)}
+                          onClick={() => handleToggleClick(item)}
+                          title={isProductFrozen(item) ? "Frozen for 30 days" : ""}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                            item.isActive !== false ? "bg-[#2f9e58]" : "bg-gray-300"
+                          } ${isProductFrozen(item) ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <span
+                            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                              item.isActive !== false ? "translate-x-4" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <button
+                          disabled={isProductFrozen(item)}
+                          onClick={() => router.push(`/merchant/products/details?id=${item.id}&edit=true`)}
+                          title={isProductFrozen(item) ? "Frozen for 30 days" : ""}
+                          className={`inline-flex items-center gap-1 rounded-[6px] border border-[#e5b54e] bg-[#fff7e2] px-3 py-1 text-[#b77905] font-semibold mr-2 ${isProductFrozen(item) ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <Pencil size={12} /> Edit
+                        </button>
+                        <button 
+                          disabled={isProductFrozen(item)}
+                          onClick={() => handleDeleteProduct(item.id)} 
+                          title={isProductFrozen(item) ? "Frozen for 30 days" : ""}
+                          className={`text-[#ef4d4d] font-semibold ${isProductFrozen(item) ? "opacity-50 cursor-not-allowed" : ""}`}
+                        >
+                          <span className="inline-flex items-center gap-1 rounded-[6px] border border-[#f0c6c6] bg-[#fff0f0] px-3 py-1 text-[#d63f3f] font-semibold">
+                            <Trash2 size={12} /> Delete
+                          </span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {products.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-6 text-gray-500">No products found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activationConfirmProduct && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Activate Product?</h3>
+            <p className="text-[13px] text-gray-600 mb-6">
+              Are you sure you want to activate <strong>{activationConfirmProduct.name}</strong>? 
+              Once activated, its status and details will be <strong>locked and unchangeable for 30 days</strong>. 
+              You will not be able to deactivate or edit it until the freeze period expires.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setActivationConfirmProduct(null)}
+                className="px-4 py-2 text-[13px] font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleToggleActive(activationConfirmProduct.id, false);
+                  setActivationConfirmProduct(null);
+                }}
+                className="px-4 py-2 text-[13px] font-semibold text-white bg-[#157a4f] hover:bg-[#116340] rounded-lg transition"
+              >
+                Yes, Activate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

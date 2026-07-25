@@ -157,7 +157,7 @@ export default function CreateMerchantOfferPage() {
       const totalPages = Number(firstRes?.pagination?.pages || 1);
 
       if (totalPages <= 1) {
-        setInventoryProducts(firstRows);
+        setInventoryProducts(firstRows.filter(p => p.isActive !== false));
         return;
       }
 
@@ -170,7 +170,8 @@ export default function CreateMerchantOfferPage() {
         allRows.push(...nextRows);
       }
 
-      setInventoryProducts(allRows);
+      const activeProducts = allRows.filter(p => p.isActive !== false);
+      setInventoryProducts(activeProducts);
     } catch (err) {
       setError(err?.message || "Failed to load inventory products.");
     } finally {

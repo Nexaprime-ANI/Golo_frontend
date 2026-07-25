@@ -1855,3 +1855,10 @@ export const checkFollowStatus = async (merchantId) => {
         return { success: true, isFollowing: false };
     }
 };
+
+export const toggleProductActiveStatus = async (productId, isActive) => {
+    return apiClient(`/merchant/products/${productId}/toggle-active`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isActive }),
+    });
+};
