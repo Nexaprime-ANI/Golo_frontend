@@ -355,6 +355,7 @@ export async function registerUser({
     storeLocationLatitude,
     storeLocationLongitude,
     documents,
+    referralCode,
 }) {
     return apiClient('/users/register', {
         method: 'POST',
@@ -378,6 +379,7 @@ export async function registerUser({
             storeLocationLatitude,
             storeLocationLongitude,
             documents,
+            referralCode,
         }),
     });
 }

@@ -13,8 +13,10 @@ import {
   Clock, 
   Award,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  AlertCircle
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function MerchantReferralsPage() {
   const { user } = useAuth();
@@ -22,6 +24,10 @@ export default function MerchantReferralsPage() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [referralData, setReferralData] = useState(null);
+  const [claimLoading, setClaimLoading] = useState(null);
+  const [showFreeTierModal, setShowFreeTierModal] = useState(false);
+  const [freeTierMessage, setFreeTierMessage] = useState("");
+  const router = useRouter();
 
   useEffect(() => {
     const fetchReferrals = async () => {
@@ -68,6 +74,39 @@ export default function MerchantReferralsPage() {
     navigator.clipboard.writeText(referralCode);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  const handleClaim = async (referralId) => {
+    setClaimLoading(referralId);
+    try {
+      const response = await apiClient(`/merchant/referrals/claim/${referralId}`, { method: 'POST' });
+      if (response.success) {
+        // Manually update the local state to show it was claimed
+        setReferralData((prev) => {
+          if (!prev) return prev;
+          const newHistory = prev.history.map(r => r.id === referralId ? { ...r, status: 'VERIFIED', reward: 15 } : r);
+          // Also update stats if needed
+          return { ...prev, history: newHistory, stats: { ...prev.stats, activeReferrals: prev.stats.activeReferrals + 1, totalRewards: prev.stats.totalRewards + 15 } };
+        });
+      } else {
+        if (response.message?.toLowerCase().includes('free tier') || response.message?.toLowerCase().includes('upgrade')) {
+          setFreeTierMessage(response.message);
+          setShowFreeTierModal(true);
+        } else {
+          alert(response.message || 'Failed to claim reward.');
+        }
+      }
+    } catch (error) {
+      if (error.message?.toLowerCase().includes('free tier') || error.message?.toLowerCase().includes('upgrade')) {
+        setFreeTierMessage(error.message);
+        setShowFreeTierModal(true);
+      } else {
+        console.error('Claim error:', error);
+        alert(error.message || 'An error occurred while claiming.');
+      }
+    } finally {
+      setClaimLoading(null);
+    }
   };
 
   return (
@@ -253,15 +292,23 @@ export default function MerchantReferralsPage() {
                       </td>
                       <td className="px-8 py-5">
                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold ${
-                          referral.status === 'VERIFIED' ? 'bg-[#F0FDF4] text-[#166534]' : 'bg-[#FFFBEB] text-[#B45309]'
+                          referral.status === 'VERIFIED' ? 'bg-[#F0FDF4] text-[#166534]' : referral.status === 'QUALIFIED' ? 'bg-[#EFF6FF] text-[#1D4ED8]' : 'bg-[#FFFBEB] text-[#B45309]'
                         }`}>
-                          {referral.status === 'VERIFIED' ? <CheckCircle2 size={14} /> : <Clock size={14} />}
-                          {referral.status === 'VERIFIED' ? 'Reward Credited' : 'Registered · Pending Purchase'}
+                          {referral.status === 'VERIFIED' ? <CheckCircle2 size={14} /> : referral.status === 'QUALIFIED' ? <Gift size={14} /> : <Clock size={14} />}
+                          {referral.status === 'VERIFIED' ? 'Reward Credited' : referral.status === 'QUALIFIED' ? 'Qualified · Ready to Claim' : 'Registered · Pending Purchase'}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-right">
-                        {referral.reward != null ? (
+                        {referral.status === 'VERIFIED' && referral.reward != null ? (
                           <span className="text-[15px] font-bold text-[#157A4F]">+{referral.reward} Days</span>
+                        ) : referral.status === 'QUALIFIED' ? (
+                          <button 
+                            onClick={() => handleClaim(referral.id)}
+                            disabled={claimLoading === referral.id}
+                            className="bg-[#157A4F] text-white px-4 py-1.5 rounded-lg text-[13px] font-bold hover:bg-[#11623f] transition-colors disabled:opacity-50 flex items-center gap-2 ml-auto"
+                          >
+                            {claimLoading === referral.id ? 'Claiming...' : 'Claim Reward'}
+                          </button>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[12px] font-medium text-[#B45309] bg-[#FFFBEB] px-2 py-1 rounded-md">
                             <Clock size={12} />
@@ -294,6 +341,36 @@ export default function MerchantReferralsPage() {
           
         </div>
       </main>
+
+      {/* Free Tier Modal */}
+      {showFreeTierModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 mx-auto">
+              <Award className="text-red-500" size={32} />
+            </div>
+            <h3 className="text-2xl font-bold text-center text-gray-900 mb-3">Upgrade Required</h3>
+            <p className="text-center text-gray-600 mb-8 leading-relaxed">
+              {freeTierMessage || "You cannot claim this reward on the Free tier. Please upgrade to a Paid plan to claim your 15-day extension."}
+            </p>
+            <div className="flex flex-col gap-3">
+              <button 
+                onClick={() => router.push('/merchant/upgrade')}
+                className="w-full bg-[#157A4F] text-white font-bold py-4 rounded-xl hover:bg-[#11623f] transition-colors shadow-lg shadow-[#157A4F]/20 text-[15px]"
+              >
+                View Paid Plans
+              </button>
+              <button 
+                onClick={() => setShowFreeTierModal(false)}
+                className="w-full bg-gray-50 text-gray-700 font-semibold py-4 rounded-xl hover:bg-gray-100 transition-colors text-[15px]"
+              >
+                Maybe Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
