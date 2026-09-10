@@ -128,6 +128,7 @@ export function AuthProvider({ children }) {
         storeLocationLatitude,
         storeLocationLongitude,
         documents,
+        referralCode,
     }) => {
         const response = await registerUser({
             name,
@@ -149,6 +150,7 @@ export function AuthProvider({ children }) {
             storeLocationLatitude,
             storeLocationLongitude,
             documents,
+            referralCode,
         });
         return response;
     }, []);

@@ -39,8 +39,15 @@ export default function MerchantReferralsPage() {
     fetchReferrals();
   }, []);
 
+  const [referralLink, setReferralLink] = useState("");
+
   const referralCode = referralData?.referralCode || user?.referralCode || "GOLO2026";
-  const referralLink = referralData?.link || `https://golo.com/join?ref=${referralCode}`;
+
+  // Set the referral link only on client side to avoid SSR hydration mismatch
+  useEffect(() => {
+    const link = referralData?.link || `${window.location.origin}/merchant-register?ref=${referralCode}`;
+    setReferralLink(link);
+  }, [referralData, referralCode]);
   
   const stats = referralData?.stats || {
     totalReferrals: 0,
