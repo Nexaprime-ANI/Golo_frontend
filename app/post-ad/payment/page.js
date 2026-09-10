@@ -14,6 +14,7 @@ export default function PostAdPaymentPage() {
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -62,28 +63,53 @@ export default function PostAdPaymentPage() {
       return;
     }
 
+    const walletBalance = user?.walletBalance || 0;
+    const walletToUse = useWallet ? Math.min(total, walletBalance) : 0;
+    const remainingToPay = total - walletToUse;
+
     setProcessing(true);
     setMessage({ type: "", text: "" });
 
     try {
-      await openRazorpayCheckout({
-        amount: total,
-        description: `Ad Payment - ${pending.adData.title || "GOLO"}`,
-        notes: {
-          flow: "post_ad",
-          category: pending.adData.category || "General",
-          templateId: String(pending?.payment?.templateId || 1),
-        },
-        prefill: {
-          name: user?.name || "",
-          email: user?.email || "",
-          contact: pending.adData?.contactInfo?.phone || "",
-        },
-      });
+      if (remainingToPay > 0) {
+        await openRazorpayCheckout({
+          amount: remainingToPay,
+          description: `Ad Payment - ${pending.adData.title || "GOLO"}`,
+          notes: {
+            flow: "post_ad",
+            category: pending.adData.category || "General",
+            templateId: String(pending?.payment?.templateId || 1),
+          },
+          prefill: {
+            name: user?.name || "",
+            email: user?.email || "",
+            contact: pending.adData?.contactInfo?.phone || "",
+          },
+        });
+      }
 
       const response = await createAd(pending.adData);
 
       if (response?.success) {
+        if (walletToUse > 0) {
+          try {
+            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/wallets/debit`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${localStorage.getItem("token") || localStorage.getItem("golo_token")}`
+              },
+              body: JSON.stringify({
+                amount: walletToUse,
+                description: `Payment for Ad: ${pending.adData.title || "GOLO"}`,
+                referenceId: response.data?.adId || "ad",
+                referenceType: "ad"
+              })
+            });
+          } catch (e) {
+            console.error("Failed to debit wallet", e);
+          }
+        }
         if (typeof window !== "undefined") {
           localStorage.removeItem("pendingAdPost");
         }
@@ -149,6 +175,33 @@ export default function PostAdPaymentPage() {
                   <span className="font-semibold text-gray-900">Total Amount</span>
                   <span className="font-bold text-[#157A4F]">₹{total.toFixed(2)}</span>
                 </div>
+                {user?.walletBalance > 0 && (
+                  <div className="pt-3 border-t border-gray-200">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        checked={useWallet} 
+                        onChange={(e) => setUseWallet(e.target.checked)}
+                        className="w-4 h-4 text-[#157A4F] rounded border-gray-300 focus:ring-[#157A4F]"
+                      />
+                      <span className="text-gray-700">
+                        Use Wallet Balance (Available: ₹{(user.walletBalance || 0).toFixed(2)})
+                      </span>
+                    </label>
+                    {useWallet && (
+                      <div className="flex justify-between mt-2 pl-6">
+                        <span className="text-gray-500">Wallet Deduction</span>
+                        <span className="text-red-500">-₹{Math.min(total, user.walletBalance || 0).toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {useWallet && user?.walletBalance > 0 && (
+                  <div className="pt-3 border-t border-gray-200 flex justify-between text-base">
+                    <span className="font-semibold text-gray-900">Remaining to Pay</span>
+                    <span className="font-bold text-[#157A4F]">₹{Math.max(0, total - (user.walletBalance || 0)).toFixed(2)}</span>
+                  </div>
+                )}
               </div>
 
               <button
@@ -157,7 +210,7 @@ export default function PostAdPaymentPage() {
                 disabled={processing}
                 className="w-full bg-[#157A4F] text-white py-3 rounded-xl font-semibold hover:bg-[#0f5c3a] transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {processing ? "Processing payment..." : `Pay ₹${total.toFixed(2)} & Post Ad`}
+                {processing ? "Processing payment..." : `Pay ₹${(useWallet ? Math.max(0, total - (user.walletBalance || 0)) : total).toFixed(2)} & Post Ad`}
               </button>
             </>
           )}

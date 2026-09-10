@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { deleteAd, trackAdView } from "../lib/api";
+import { deleteAd, cancelAd, trackAdView } from "../lib/api";
 import { useState } from "react";
 import { Eye, Edit2, Trash2, Loader2 } from "lucide-react";
 
@@ -57,6 +57,7 @@ export default function AdCard({ ad, onDelete, onEdit }) {
   if (!ad) return null;
 
   const { adId, _id, title, price, createdAt, images = [], description, templateId = 2, category, expiryDate, status } = ad;
+  const isCancellable = status !== 'deleted' && status !== 'expired';
   // Use custom adId for API calls, _id for URL if adId not present
   const apiId = adId || _id;
   const linkId = adId || _id;
@@ -75,10 +76,14 @@ export default function AdCard({ ad, onDelete, onEdit }) {
     if (!apiId) return;
     setIsDeleting(true);
     try {
-      await deleteAd(apiId);
+      if (isCancellable) {
+        await cancelAd(apiId);
+      } else {
+        await deleteAd(apiId);
+      }
       if (onDelete) onDelete(apiId);
     } catch {
-      alert("Failed to delete ad. Please try again.");
+      alert(`Failed to ${isCancellable ? 'cancel' : 'delete'} ad. Please try again.`);
     } finally {
       setIsDeleting(false);
     }
@@ -250,23 +255,17 @@ export default function AdCard({ ad, onDelete, onEdit }) {
           }}
           onClick={() => setDeleteConfirm(false)}
         >
-          <div
-            style={{
-              background: "#fff", borderRadius: "20px",
-              padding: "36px 32px", maxWidth: "400px", width: "90%",
-              boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
-              display: "flex", flexDirection: "column", alignItems: "center", gap: "16px",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ padding: "16px", borderRadius: "50%", background: "#fee2e2", color: "#ef4444" }}>
-              <Trash2 size={32} />
+          <div style={{ background: "#fff", borderRadius: "20px", padding: "24px", maxWidth: "320px", width: "100%", textAlign: "center", boxShadow: "0 10px 40px rgba(0,0,0,0.15)" }}>
+            <div style={{ width: "48px", height: "48px", background: "#fee2e2", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", color: "#ef4444" }}>
+              <Trash2 size={24} />
             </div>
-            <h2 style={{ fontSize: "18px", fontWeight: 700, color: "#111827", margin: 0, textAlign: "center" }}>
-              Delete Ad?
-            </h2>
-            <p style={{ fontSize: "14px", color: "#6b7280", margin: 0, textAlign: "center", lineHeight: 1.6 }}>
-              Are you sure you want to delete this ad? This action cannot be undone.
+            <h3 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 8px", color: "#111827" }}>
+              Delete this Ad?
+            </h3>
+            <p style={{ fontSize: "14px", color: "#4b5563", margin: "0 0 24px", lineHeight: "1.5" }}>
+              {isCancellable 
+                ? "Are you sure you want to delete this ad? Unutilized days will be calculated and the amount will be refunded to your wallet." 
+                : "Are you sure you want to delete this ad? This action cannot be undone."}
             </p>
             <div style={{ display: "flex", gap: "12px", marginTop: "8px", width: "100%" }}>
               <button

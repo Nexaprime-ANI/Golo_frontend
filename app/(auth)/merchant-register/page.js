@@ -1,7 +1,7 @@
 "use client";
 
 import AuthLayout from "./../../components/AuthLayout";
-import { Mail, Lock, Phone, MapPin, Eye, EyeOff, ChevronDown, Store, Grid, Layers, Briefcase, Calendar, AlignLeft, Info, Upload, ShieldCheck, Check, FileText, AlertCircle, RefreshCw, Download, Clock, Search, ChevronRight, ArrowRight } from "lucide-react";
+import { Mail, Lock, Phone, MapPin, Eye, EyeOff, ChevronDown, Store, Grid, Layers, Briefcase, Calendar, AlignLeft, Info, Upload, ShieldCheck, Check, FileText, AlertCircle, RefreshCw, Download, Clock, Search, ChevronRight, ArrowRight, Gift } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -64,6 +64,9 @@ export default function MerchantRegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [validatingReferral, setValidatingReferral] = useState(false);
+  const [referralResult, setReferralResult] = useState(null);
   
   // Step 2: Business
   const [storeName, setStoreName] = useState("");
@@ -146,6 +149,40 @@ export default function MerchantRegisterPage() {
   useEffect(() => {
     if (isAuthenticated) router.push("/merchant/dashboard");
   }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    // Parse referral code from URL if present
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, []);
+
+  useEffect(() => {
+    const validateCode = async () => {
+      if (!referralCode || referralCode.length < 3) {
+        setReferralResult(null);
+        return;
+      }
+      setValidatingReferral(true);
+      try {
+        const res = await fetch(`${API_BASE_URL}/users/referral/validate/${referralCode}`);
+        const data = await res.json();
+        setReferralResult(data);
+      } catch (err) {
+        setReferralResult({ valid: false, message: 'Failed to validate code' });
+      } finally {
+        setValidatingReferral(false);
+      }
+    };
+
+    const timeoutId = setTimeout(() => {
+      validateCode();
+    }, 500); // debounce 500ms
+
+    return () => clearTimeout(timeoutId);
+  }, [referralCode]);
 
   const handleLocationSelect = (location) => {
     const { latitude, longitude, address } = normalizeLocationPayload(location);
@@ -250,6 +287,7 @@ export default function MerchantRegisterPage() {
         storeLocationLatitude: normalizedCoords.latitude,
         storeLocationLongitude: normalizedCoords.longitude,
         documents: uploadedDocs,
+        referralCode: referralResult?.valid ? referralCode : undefined,
       });
       setCurrentStep(5);
     } catch (err) {
@@ -498,6 +536,27 @@ export default function MerchantRegisterPage() {
                         </button>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Referral Code (Optional) */}
+                  <div>
+                    <label className="block text-[12px] font-semibold text-gray-700 mb-1.5">Referral Code (Optional)</label>
+                    <div className="relative">
+                      <Gift className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                      <input type="text" placeholder="Enter referral code if you have one"
+                        className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-[13px] focus:outline-none focus:ring-1 transition-all text-gray-800 placeholder-gray-400 ${
+                          referralResult 
+                            ? (referralResult.valid ? 'border-green-500 focus:border-green-500 focus:ring-green-500' : 'border-red-500 focus:border-red-500 focus:ring-red-500')
+                            : 'border-gray-200 focus:border-[#157A4F] focus:ring-[#157A4F]'
+                        }`}
+                        value={referralCode} onChange={(e) => setReferralCode(e.target.value)} />
+                    </div>
+                    {validatingReferral && <p className="text-[11px] text-gray-500 mt-1.5">Validating code...</p>}
+                    {!validatingReferral && referralResult && (
+                      <p className={`text-[11px] font-semibold mt-1.5 ${referralResult.valid ? 'text-green-600' : 'text-red-500'}`}>
+                        {referralResult.valid ? `Referred by: ${referralResult.name}` : referralResult.message}
+                      </p>
+                    )}
                   </div>
 
                   {/* Terms Alert Box */}

@@ -78,7 +78,7 @@ export const getMerchantActivePlan = async (merchantProfile) => {
 };
 
 // ============================================================
-// Centralized API Layer — Choja Frontend → ads-microservice
+// Centralized API Layer Ã¢â‚¬â€ Choja Frontend Ã¢â€ â€™ ads-microservice
 // ============================================================
 
 // Canonical storage keys for auth tokens. Keep fallbacks for backward compatibility.
@@ -239,7 +239,7 @@ export async function apiClient(endpoint, options = {}) {
         throw networkError;
     }
 
-    // Handle 401 — try to refresh token
+    // Handle 401 Ã¢â‚¬â€ try to refresh token
     if (response.status === 401 && typeof window !== 'undefined' && !isPublicAuthEndpoint) {
         const refreshed = await tryRefreshToken();
         if (refreshed) {
@@ -523,7 +523,7 @@ export async function saveIWantPreference(payload) {
 }
 
 // ============================================================
-// ADS — PUBLIC APIs (no auth required)
+// ADS Ã¢â‚¬â€ PUBLIC APIs (no auth required)
 // ============================================================
 
 export async function getAllAds({ page = 1, limit = 10, category, sortBy, sortOrder } = {}) {
@@ -589,7 +589,7 @@ export async function getNearbyAds({ lat, lng, distance = 10000, category, page 
 }
 
 // ============================================================
-// ADS — AUTHENTICATED APIs
+// ADS Ã¢â‚¬â€ AUTHENTICATED APIs
 // ============================================================
 
 export async function createAd(adData) {
@@ -610,6 +610,24 @@ export async function deleteAd(adId) {
     return apiClient(`/ads/${adId}`, {
         method: 'DELETE',
     });
+}
+
+export async function cancelAd(adId) {
+    return apiClient(`/ads/${adId}/cancel`, {
+        method: 'POST',
+    });
+}
+
+// ============================================================
+// WALLETS
+// ============================================================
+
+export async function getWalletBalance() {
+    return apiClient('/wallets/balance');
+}
+
+export async function getWalletTransactions() {
+    return apiClient('/wallets/transactions');
 }
 
 export async function getMyAds({ page = 1, limit = 10 } = {}) {
@@ -2027,4 +2045,3 @@ export async function deleteMerchantAccount(payload) {
         body: JSON.stringify(payload),
     });
 }
-
