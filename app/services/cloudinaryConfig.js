@@ -121,4 +121,44 @@ export function isValidCloudinaryUrl(url) {
     return url.includes('cloudinary.com') || url.includes('res.cloudinary.com');
 }
 
+// ==================== URL MASKING ====================
+
+const CLOUDINARY_BASE = `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dkiagrvnp'}`;
+const MASKED_BASE = '/media';
+
+/**
+ * Masks a raw Cloudinary URL behind our own domain proxy.
+ * Input:  https://res.cloudinary.com/dkiagrvnp/image/upload/v1/abc.jpg
+ * Output: /media/image/upload/v1/abc.jpg
+ *
+ * Safe by default — non-Cloudinary URLs pass through unchanged.
+ */
+export function maskCloudinaryUrl(url) {
+    if (!url || typeof url !== 'string') return url;
+    if (!url.includes('res.cloudinary.com')) return url;
+    return url.replace(CLOUDINARY_BASE, MASKED_BASE);
+}
+
+/**
+ * Recursively walks an object/array and masks all Cloudinary URLs found in string values.
+ * Used to automatically mask all URLs in API responses.
+ */
+export function maskAllCloudinaryUrls(obj) {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'string') {
+        return maskCloudinaryUrl(obj);
+    }
+    if (Array.isArray(obj)) {
+        return obj.map(item => maskAllCloudinaryUrls(item));
+    }
+    if (typeof obj === 'object') {
+        const masked = {};
+        for (const key of Object.keys(obj)) {
+            masked[key] = maskAllCloudinaryUrls(obj[key]);
+        }
+        return masked;
+    }
+    return obj;
+}
+
 export default CLOUDINARY_CONFIG;

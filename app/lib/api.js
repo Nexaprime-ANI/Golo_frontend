@@ -108,6 +108,32 @@ export const API_BASE_URL = normalizeBackendApiBaseUrl(
     process.env.NEXT_PUBLIC_API_URL,
 );
 export const API_ORIGIN_URL = API_BASE_URL;
+
+// ==================== CLOUDINARY URL MASKING ====================
+const _MASKED_BASE = '/media';
+// Regex matches https://res.cloudinary.com/<any-cloud-name>/ and captures the rest
+const _CLOUDINARY_URL_RE = /https?:\/\/res\.cloudinary\.com\/[^/]+\//g;
+
+function _maskCloudinaryStr(str) {
+    if (!str || typeof str !== 'string') return str;
+    if (!str.includes('res.cloudinary.com')) return str;
+    return str.replace(_CLOUDINARY_URL_RE, _MASKED_BASE + '/');
+}
+
+function _maskCloudinaryDeep(obj) {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj === 'string') return _maskCloudinaryStr(obj);
+    if (Array.isArray(obj)) return obj.map(_maskCloudinaryDeep);
+    if (typeof obj === 'object') {
+        const out = {};
+        for (const k of Object.keys(obj)) {
+            out[k] = _maskCloudinaryDeep(obj[k]);
+        }
+        return out;
+    }
+    return obj;
+}
+// ================================================================
 // Keep the backend base URL as a plain origin so auth routes resolve to /users/*.
 const BASE_URL = API_BASE_URL;
 const PUBLIC_AUTH_ENDPOINTS = new Set([
@@ -266,7 +292,8 @@ async function handleResponse(response) {
         throw error;
     }
 
-    return data;
+    // Mask all Cloudinary URLs in the response before returning to components
+    return _maskCloudinaryDeep(data);
 }
 
 async function tryRefreshToken() {
