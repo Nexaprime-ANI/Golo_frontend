@@ -1553,9 +1553,9 @@ export default function PrivacyPolicyPage() {
       </main>
 
       {/* Modern minimal footer */}
-      <footer className="w-full text-center py-12 text-gray-400 font-medium">
-        <p>&copy; {new Date().getFullYear()} GOLO. All rights reserved.</p>
-      </footer>
+      <div className="mt-12 text-center text-sm text-gray-500 pb-12">
+        <p className="uppercase tracking-widest font-semibold">End of GOLO Privacy Policy — Individual Operator Version</p>
+      </div>
     </div>
   );
 }
