@@ -19,7 +19,8 @@ export async function generateMetadata(props) {
   }
 
   try {
-    const res = await fetch(`http://localhost:3002/offers/${offerId}`, { cache: "no-store" });
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+    const res = await fetch(`${baseUrl}/offers/${offerId}`, { cache: "no-store" });
     if (!res.ok) throw new Error("Offer fetch failed");
     const data = await res.json();
     const offer = data.data || data;

@@ -228,6 +228,14 @@ function NearbyDealDetailsContent() {
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [liveStockByProductId, setLiveStockByProductId] = useState({});
 
+  // Reporting State
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
+  const [reportDescription, setReportDescription] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportSuccess, setReportSuccess] = useState(false);
+  const [reportError, setReportError] = useState("");
+
   const offerId = searchParams.get("offerId") || "";
   const nowTs = Date.now();
   const offerStartsTs = offer?.startsAt ? new Date(offer.startsAt).getTime() : null;
@@ -607,6 +615,49 @@ function NearbyDealDetailsContent() {
       return { latitude, longitude, location };
     } catch {
       return {};
+    }
+  };
+
+  const handleReportSubmit = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      setReportModalOpen(false);
+      setShowAuthPrompt(true);
+      return;
+    }
+    if (!reportReason) {
+      setReportError("Please select a reason");
+      return;
+    }
+
+    setReportSubmitting(true);
+    setReportError("");
+
+    try {
+      const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_USER_API_URL || "http://localhost:3002").replace(/\/$/, "");
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`${BASE_URL}/offers/${offerId}/report`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({
+          reason: reportReason,
+          description: reportDescription
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setReportSuccess(true);
+      } else {
+        setReportError(data.message || "Failed to submit report");
+      }
+    } catch (err) {
+      setReportError("An error occurred while submitting your report");
+    } finally {
+      setReportSubmitting(false);
     }
   };
 
@@ -1310,7 +1361,124 @@ function NearbyDealDetailsContent() {
         </section>
 
 
+
+        {/* Report Link */}
+        <div className="flex justify-center mt-8 mb-12">
+          <button 
+            onClick={() => { setReportModalOpen(true); setReportSuccess(false); setReportError(""); }}
+            className="flex items-center gap-2 text-sm text-[#999] hover:text-red-500 transition-colors"
+          >
+            <AlertCircle size={16} />
+            Report this offer
+          </button>
+        </div>
+
       </div>
+
+      {/* Report Modal */}
+      {reportModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            {reportSuccess ? (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="text-green-600" size={32} />
+                </div>
+                <h3 className="text-2xl font-bold text-[#1f2329] mb-2">Report Submitted</h3>
+                <p className="text-[#5d6670] mb-6">
+                  Thank you for helping us keep GOLO safe. Our team will review this offer shortly.
+                </p>
+                <button
+                  onClick={() => setReportModalOpen(false)}
+                  className="w-full bg-[#1f2329] text-white py-3 rounded-xl font-bold hover:bg-[#333] transition"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="px-6 py-4 border-b border-[#e5e7eb] flex justify-between items-center">
+                  <h3 className="text-lg font-bold text-[#1f2329]">Report Offer</h3>
+                  <button onClick={() => setReportModalOpen(false)} className="text-[#999] hover:text-[#333]">
+                    ✕
+                  </button>
+                </div>
+                <div className="p-6">
+                  <p className="text-sm text-[#5d6670] mb-4">
+                    Why are you reporting this offer?
+                  </p>
+                  
+                  {reportError && (
+                    <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100 flex items-start gap-2">
+                      <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                      <span>{reportError}</span>
+                    </div>
+                  )}
+
+                  <div className="space-y-3 mb-6">
+                    {["misleading", "fake", "inappropriate", "scam", "other"].map((reason) => (
+                      <label key={reason} className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative flex items-center justify-center">
+                          <input 
+                            type="radio" 
+                            name="reportReason" 
+                            className="peer appearance-none w-5 h-5 border border-[#d6dbe2] rounded-full checked:border-blue-600 checked:border-2 transition-all cursor-pointer"
+                            checked={reportReason === reason}
+                            onChange={() => setReportReason(reason)}
+                          />
+                          <div className="absolute w-2.5 h-2.5 bg-blue-600 rounded-full scale-0 peer-checked:scale-100 transition-transform pointer-events-none" />
+                        </div>
+                        <span className="text-[#1f2329] capitalize group-hover:text-blue-600 transition-colors">
+                          {reason}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  {reportReason === "other" && (
+                    <div className="mb-6 animate-in slide-in-from-top-2 fade-in duration-200">
+                      <label className="block text-sm font-medium text-[#5d6670] mb-1">
+                        Additional Details
+                      </label>
+                      <textarea 
+                        className="w-full border border-[#d6dbe2] rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-shadow"
+                        rows="3"
+                        placeholder="Please explain why..."
+                        value={reportDescription}
+                        onChange={(e) => setReportDescription(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => setReportModalOpen(false)}
+                      className="flex-1 py-3 font-bold text-[#5d6670] bg-[#f1f5f9] rounded-xl hover:bg-[#e2e8f0] transition-colors"
+                      disabled={reportSubmitting}
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      onClick={handleReportSubmit}
+                      className="flex-1 py-3 font-bold text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      disabled={reportSubmitting || !reportReason}
+                    >
+                      {reportSubmitting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        "Submit Report"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       <Footer />
     </main>
