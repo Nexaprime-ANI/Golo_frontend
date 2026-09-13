@@ -343,6 +343,22 @@ export default function RegisterPage() {
         setError("Password must be at least 6 characters.");
         return;
       }
+
+      if (!dateOfBirth) {
+        setError("Date of birth is required.");
+        return;
+      }
+      const dobDate = new Date(dateOfBirth);
+      const todayDate = new Date();
+      let age = todayDate.getFullYear() - dobDate.getFullYear();
+      const monthDiff = todayDate.getMonth() - dobDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && todayDate.getDate() < dobDate.getDate())) {
+        age--;
+      }
+      if (age < 18) {
+        setError("You must be at least 18 years old to register.");
+        return;
+      }
     } else {
       const normalizedCoordinates = normalizeLocationPayload(storeCoordinates);
       const hasValidCoordinates = isValidStoreCoordinates(normalizedCoordinates);
