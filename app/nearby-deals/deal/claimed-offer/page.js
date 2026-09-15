@@ -19,7 +19,7 @@ const steps = [
 function pickLiveImage(...candidates) {
   for (const candidate of candidates) {
     const value = String(candidate || "").trim();
-    if (!value) continue;
+    if (!value || value === "null" || value === "undefined") continue;
     if (
       value === "/images/deal2.avif" ||
       value === "/images/place2.avif" ||
@@ -53,9 +53,15 @@ function pickLiveImageFromProducts(products = []) {
 }
 
 function formatExpiryLabel(voucher) {
-  const validityHours = 6;
+  let validityHours = 6;
+  if (voucher?.validityHours) {
+    validityHours = voucher.validityHours;
+  } else if (voucher?.expiresAt && voucher?.claimedAt) {
+    validityHours = Math.max(1, Math.round((new Date(voucher.expiresAt).getTime() - new Date(voucher.claimedAt).getTime()) / (1000 * 60 * 60)));
+  }
+
   const claimedAt = voucher?.claimedAt ? new Date(voucher.claimedAt).getTime() : Date.now();
-  const expiresAt = claimedAt + validityHours * 60 * 60 * 1000;
+  const expiresAt = voucher?.expiresAt ? new Date(voucher.expiresAt).getTime() : (claimedAt + validityHours * 60 * 60 * 1000);
   const local = new Date(expiresAt);
 
   if (Number.isNaN(local.getTime())) return "Today, 8:45 PM";
@@ -132,10 +138,19 @@ function ClaimedOfferContent() {
   const [merchantProfile, setMerchantProfile] = useState(null);
   const [offerDetails, setOfferDetails] = useState(null);
   const [expiryLabel, setExpiryLabel] = useState("");
+  const [validityLabel, setValidityLabel] = useState("Loading validity...");
 
   useEffect(() => {
     if (selectedVoucher) {
       setExpiryLabel(formatExpiryLabel(selectedVoucher));
+
+      let hours = 6;
+      if (selectedVoucher.validityHours) {
+        hours = selectedVoucher.validityHours;
+      } else if (selectedVoucher.expiresAt && selectedVoucher.claimedAt) {
+        hours = Math.max(1, Math.round((new Date(selectedVoucher.expiresAt).getTime() - new Date(selectedVoucher.claimedAt).getTime()) / (1000 * 60 * 60)));
+      }
+      setValidityLabel(`This QR is valid for ${hours} hour${hours > 1 ? 's' : ''} from claim time`);
     }
   }, [selectedVoucher]);
 
@@ -697,7 +712,12 @@ function ClaimedOfferContent() {
           <div className="overflow-hidden rounded-[12px] border border-[#d8dce3] bg-white shadow-[0_6px_18px_rgba(16,24,40,0.06)]">
             <div className="flex items-center gap-3 border-b border-[#e6e9ed] px-4 py-3">
               <div className="h-14 w-14 overflow-hidden rounded-[8px] border border-[#d9dde2]">
-                <Image src={resolvedOfferImage} alt={resolvedOfferTitle} width={56} height={56} className="h-full w-full object-cover" unoptimized />
+                <img 
+                  src={resolvedOfferImage} 
+                  alt={resolvedOfferTitle} 
+                  className="h-full w-full object-cover" 
+                  onError={(e) => { e.target.onerror = null; e.target.src = "/images/merchant_shop_storefront.png"; }}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -730,7 +750,7 @@ function ClaimedOfferContent() {
               <p className="mt-1 text-[16px] font-medium text-[#1e2228]">Scan this QR at the store to redeem the offer</p>
 
               <div className="mx-auto mt-4 w-fit min-w-[290px] rounded-[10px] bg-[#f0f2f5] px-4 py-3 border border-[#e2e6eb]">
-                <p className="text-[11px] text-[#7a828d]">This QR is valid for 6 hours from claim time</p>
+                <p className="text-[11px] text-[#7a828d]">{validityLabel}</p>
                 <p className="mt-1 text-[13px] font-bold text-[#1e232b]">Expires: {expiryLabel || "Loading..."}</p>
               </div>
 
@@ -809,8 +829,13 @@ function ClaimedOfferContent() {
           <div className="space-y-3 sticky top-[104px]">
             <aside className="rounded-[12px] border border-[#d8dce3] bg-white p-4 shadow-[0_4px_14px_rgba(16,24,40,0.05)]">
               <div className="flex items-start gap-3">
-                <div className="h-12 w-12 shrink-0 aspect-square overflow-hidden rounded-full border border-[#d8dce3]">
-                  <Image src={resolvedMerchantAvatar} alt={resolvedMerchantName} width={64} height={64} className="h-full w-full rounded-full object-cover" unoptimized />
+                <div className="h-12 w-12 shrink-0 aspect-square overflow-hidden rounded-full border border-[#d8dce3] bg-white">
+                  <img 
+                    src={resolvedMerchantAvatar} 
+                    alt={resolvedMerchantName} 
+                    className="h-full w-full rounded-full object-cover" 
+                    onError={(e) => { e.target.onerror = null; e.target.src = "/images/default-user-avatar.jpg"; }}
+                  />
                 </div>
                 <div>
                   <p className="text-[15px] font-bold text-[#1f2329]">{resolvedMerchantName}</p>
@@ -819,8 +844,13 @@ function ClaimedOfferContent() {
                 </div>
               </div>
 
-              <div className="mt-4 overflow-hidden rounded-[10px] border border-[#e4e7eb]">
-                <Image src={resolvedMerchantBanner} alt={`${resolvedMerchantName} Banner`} width={420} height={240} className="h-[110px] w-full object-cover" unoptimized />
+              <div className="mt-4 overflow-hidden rounded-[10px] border border-[#e4e7eb] bg-white">
+                <img 
+                  src={resolvedMerchantBanner} 
+                  alt={`${resolvedMerchantName} Banner`} 
+                  className="h-[110px] w-full object-cover" 
+                  onError={(e) => { e.target.onerror = null; e.target.src = "/images/merchant_shop_storefront.png"; }}
+                />
               </div>
 
               <button

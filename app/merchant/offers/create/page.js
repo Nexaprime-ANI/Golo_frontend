@@ -55,6 +55,8 @@ const EMPTY_FORM = {
   loyaltyPointsPerPurchase: "1",
   termsAndConditions: DEFAULT_TERMS,
   exampleUsage: DEFAULT_EXAMPLE,
+  qrValidityHours: "6",
+  customQrValidityHours: "",
 };
 
 function buildSelectedDates(startDate, endDate) {
@@ -498,6 +500,7 @@ export default function CreateMerchantOfferPage() {
          selectedDates,
          totalPrice: totalOfferValue,
          promotionExpiryText: formData.promotionExpiryText,
+         qrValidityHours: formData.qrValidityHours === "custom" ? Number(formData.customQrValidityHours || 6) : Number(formData.qrValidityHours || 6),
          loyaltyRewardEnabled: formData.loyaltyRewardEnabled,
          loyaltyPointsPerPurchase: Number(formData.loyaltyPointsPerPurchase || 1),
          termsAndConditions: formData.termsAndConditions,
@@ -763,7 +766,45 @@ export default function CreateMerchantOfferPage() {
                 </div>
               </div>
 
-              <div className="rounded-[12px] border border-[#ececec] bg-[#fbfbfb] p-4">
+              <div className="rounded-[12px] border border-[#ececec] bg-[#fbfbfb] p-4 mt-6">
+                <div className="border-b border-[#efefef] pb-4">
+                  <h2 className="text-[18px] font-semibold text-[#202020]">Offer QR Validity</h2>
+                  <p className="mt-1 text-[12px] text-[#666]">Set the time limit for customers to redeem the offer after claiming.</p>
+                </div>
+                <div className="mt-4 flex flex-col md:flex-row gap-4 items-start md:items-end">
+                  <div className="w-full md:w-1/2">
+                    <label className="mb-1 block text-[12px] font-semibold text-[#555]">Validity Period <span className="text-[#ef4d4d]">*</span></label>
+                    <select
+                      value={formData.qrValidityHours ?? "6"}
+                      onChange={(e) => setFormData((prev) => ({ ...prev, qrValidityHours: e.target.value }))}
+                      className="h-10 w-full rounded-[8px] border border-[#dedede] bg-white px-3 text-[13px] outline-none"
+                    >
+                      <option value="6">6 Hours</option>
+                      <option value="12">12 Hours</option>
+                      <option value="24">24 Hours</option>
+                      <option value="48">48 Hours (2 Days)</option>
+                      <option value="72">72 Hours (3 Days)</option>
+                      <option value="168">168 Hours (7 Days)</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </div>
+                  {formData.qrValidityHours === "custom" && (
+                    <div className="w-full md:w-1/2">
+                      <label className="mb-1 block text-[12px] font-semibold text-[#555]">Custom Time (in Hours) <span className="text-[#ef4d4d]">*</span></label>
+                      <input
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 5"
+                        value={formData.customQrValidityHours || ""}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, customQrValidityHours: e.target.value }))}
+                        className="h-10 w-full rounded-[8px] border border-[#dedede] bg-white px-3 text-[13px] outline-none"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-[12px] border border-[#ececec] bg-[#fbfbfb] p-4 mt-6">
                 <h2 className="text-[18px] font-semibold text-[#202020]">Terms and Conditions</h2>
                 <textarea
                   value={formData.termsAndConditions ?? ''}
