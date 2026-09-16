@@ -684,7 +684,7 @@ function NearbyDealsPageContent() {
           topDiscountOnly: topDiscountOnly,
           activeNowOnly: activeNowOnly,
           page: 1,
-          limit: 50,
+          limit: 500,
         });
 
         const primaryRows = Array.isArray(response?.data)
@@ -813,7 +813,7 @@ function NearbyDealsPageContent() {
       topDiscountOnly,
       activeNowOnly,
       page: 1,
-      limit: 50,
+      limit: 500,
     }).then((response) => {
       const rows = Array.isArray(response?.data)
         ? response.data.map(normalizeNearbyOffer).map((r) => withResolvedDistance(r, userCoordinates.lat, userCoordinates.lng))
