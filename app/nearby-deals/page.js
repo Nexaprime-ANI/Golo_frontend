@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState, useEffect, useRef } from "react";
+import { Suspense, useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { SlidersHorizontal, Grid2x2, List, ChevronDown, Clock, Star, MapPin, Tag, Calendar, ArrowRight, Heart } from "lucide-react";
@@ -482,6 +482,7 @@ function NearbyDealsPageContent() {
   const micPermissionGrantedRef = useRef(false);
   const lastLocationUpdateRef = useRef(0);
   const nearbyFetchSeqRef = useRef(0);
+  const sentinelRef = useRef(null);
   // Track the coordinates used in the last actual API fetch so we avoid
   // re-fetching just because GPS ticked by a few metres.
   const lastFetchedCoordsRef = useRef(null); // { lat, lng } of last API fetch
@@ -911,6 +912,32 @@ function NearbyDealsPageContent() {
 
     return { total, active, avgPrice };
   }, [filteredDeals]);
+
+  // ── Infinite scroll ─────────────────────────────────────────────────────────
+  // loadMoreOffers increments displayLimit by 16 each time the sentinel enters
+  // the viewport. Stable reference via useCallback so the observer effect only
+  // re-runs when the callback identity changes (i.e. never, in practice).
+  const loadMoreOffers = useCallback(() => {
+    setDisplayLimit((prev) => prev + 16);
+  }, []);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMoreOffers();
+        }
+      },
+      { rootMargin: "250px" }, // start loading 250px before user reaches the bottom
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMoreOffers, filteredDeals.length]); // re-attach when result set changes
+  // ────────────────────────────────────────────────────────────────────────────
 
   // IMPORTANT: All hooks must run on every render, in the same order, every
   // time. The early returns below (for the auth-loading state and the
@@ -1344,37 +1371,54 @@ function NearbyDealsPageContent() {
                 })
               )}
             </div>
-            {(filteredDeals.length > displayLimit || (query && hasMoreOffers)) && (
+            {/* ── Infinite scroll sentinel ────────────────────────────────── */}
+            {/* Shown only when there are more local cards left to reveal.     */}
+            {filteredDeals.length > displayLimit && (
+              <div ref={sentinelRef} className="mt-6 flex flex-col items-center gap-3 pb-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#157A4F]" style={{ animationDelay: "0ms" }} />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#157A4F]" style={{ animationDelay: "150ms" }} />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-[#157A4F]" style={{ animationDelay: "300ms" }} />
+                </div>
+                <p className="text-[11px] text-gray-400">Loading more deals…</p>
+              </div>
+            )}
+
+            {/* When a text search has more server pages, keep the explicit button */}
+            {query && hasMoreOffers && filteredDeals.length <= displayLimit && (
               <div className="mt-6 text-center">
-                <button 
+                <button
                   onClick={async () => {
-                    if (filteredDeals.length > displayLimit) {
-                      setDisplayLimit(prev => prev + 16);
-                    } else if (query && hasMoreOffers) {
-                      const nextPage = offerPage + 1;
-                      const res = await unifiedSearch(query, { type: 'offers', limit: 16, page: nextPage });
-                      const newOffers = (res?.data?.offers || []).map(normalizeNearbyOffer);
-                      setRawOffers(prev => {
-                        const combined = [...prev, ...newOffers];
-                        const seenIds = new Set();
-                        return combined.filter((o) => {
-                          const id = o.offerId || o.requestId || o._id;
-                          if (!id) return true;
-                          if (seenIds.has(id)) return false;
-                          seenIds.add(id);
-                          return true;
-                        });
+                    const nextPage = offerPage + 1;
+                    const res = await unifiedSearch(query, { type: 'offers', limit: 16, page: nextPage });
+                    const newOffers = (res?.data?.offers || []).map(normalizeNearbyOffer);
+                    setRawOffers(prev => {
+                      const combined = [...prev, ...newOffers];
+                      const seenIds = new Set();
+                      return combined.filter((o) => {
+                        const id = o.offerId || o.requestId || o._id;
+                        if (!id) return true;
+                        if (seenIds.has(id)) return false;
+                        seenIds.add(id);
+                        return true;
                       });
-                      setDisplayLimit(prev => prev + 16);
-                      setHasMoreOffers(newOffers.length === 16);
-                      setOfferPage(nextPage);
-                    }
+                    });
+                    setDisplayLimit(prev => prev + 16);
+                    setHasMoreOffers(newOffers.length === 16);
+                    setOfferPage(nextPage);
                   }}
                   className="px-6 py-2 rounded-full border border-[#157A4F] text-[#157A4F] font-bold text-sm hover:bg-[#157A4F] hover:text-white transition-colors"
                 >
                   Load More Offers
                 </button>
               </div>
+            )}
+
+            {/* End-of-results indicator */}
+            {!loadingOffers && filteredDeals.length <= displayLimit && filteredDeals.length > 16 && !hasMoreOffers && (
+              <p className="mt-6 pb-4 text-center text-[11px] text-gray-400">
+                All {filteredDeals.length} deals loaded
+              </p>
             )}
 
             {query && !loadingOffers && (
