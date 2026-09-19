@@ -278,7 +278,7 @@ export default function FAQPage() {
         <aside className="faq-sidebar" style={{ width:300, flexShrink:0, background:"transparent", borderRight:"1px solid var(--fq-b)", position:"sticky", top:0, height:"100vh", overflowY:"auto", padding:"24px 20px", display:"flex", flexDirection:"column", gap:20, zIndex:20 }}>
           {/* Brand */}
           <div style={{ display:"flex", alignItems:"center", gap:12, paddingBottom:16, borderBottom:"1px solid var(--fq-b)" }}>
-            <div style={{ width:38, height:38, background:"linear-gradient(135deg,#157A4F,#10b981)", color:"#fff", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:"1.2rem", flexShrink:0 }}>G</div>
+            <div style={{ width:38, height:38, background:"#157A4F", color:"#fff", borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontWeight:800, fontSize:"1.2rem", flexShrink:0 }}>G</div>
             <div>
               <div style={{ fontSize:"1.1rem", fontWeight:700, color:"var(--fq-tp)" }}>GOLO Platform</div>
               <div style={{ fontSize:"0.72rem", color:"var(--fq-tm)", textTransform:"uppercase", letterSpacing:"0.5px", fontWeight:600 }}>FAQ Documentation</div>

@@ -6,6 +6,7 @@ import {
   Briefcase,
   FileText,
   Store,
+  BookOpen,
   HelpCircle,
   Mail,
   Shield,
@@ -113,6 +114,12 @@ export default function Footer() {
                 <Link href="/faqs" className="flex items-center gap-3 text-[13.5px] font-medium text-[#4c3a16] hover:text-[#111] transition-colors">
                   <HelpCircle size={16} strokeWidth={2.2} className="shrink-0" />
                   <span>FAQs</span>
+                </Link>
+              </li>
+              <li>
+                <Link href="/user-guide" className="flex items-center gap-3 text-[13.5px] font-medium text-[#4c3a16] hover:text-[#111] transition-colors">
+                  <BookOpen size={16} strokeWidth={2.2} className="shrink-0" />
+                  <span>User Guide</span>
                 </Link>
               </li>
             </ul>
