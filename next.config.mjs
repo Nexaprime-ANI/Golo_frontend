@@ -19,6 +19,7 @@ const nextConfig = {
     root: FRONTEND_ROOT,
   },
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'https',

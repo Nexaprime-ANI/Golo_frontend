@@ -1490,13 +1490,7 @@ function NavbarContent({
                           >
                             <User size={16} /> My Profile
                           </Link>
-                          <Link
-                            href="/wallet"
-                            onClick={() => setShowProfileMenu(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-wallet"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a8 8 0 0 1-5-2.7 4 4 0 0 0 2.96-7.3z"/><path d="M22 13v-2"/><path d="M22 17v-2"/></svg> Wallet {user?.walletBalance !== undefined ? `(₹${user.walletBalance})` : ''}
-                          </Link>
+
                           <Link
                             href="/profile/favorites"
                             onClick={() => setShowProfileMenu(false)}
@@ -1543,13 +1537,7 @@ function NavbarContent({
                           >
                             <User size={16} /> My Profile
                           </Link>
-                          <Link
-                            href="/wallet"
-                            onClick={() => setShowProfileMenu(false)}
-                            className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-wallet"><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a8 8 0 0 1-5-2.7 4 4 0 0 0 2.96-7.3z"/><path d="M22 13v-2"/><path d="M22 17v-2"/></svg> Wallet {user?.walletBalance !== undefined ? `(₹${user.walletBalance})` : ''}
-                          </Link>
+
                           <Link
                             href="/post-ad"
                             onClick={requireAuth(() => setShowProfileMenu(false))}
