@@ -32,7 +32,7 @@ export default function HelpCenterPage() {
     setErrorMessage("");
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_USER_API_URL || 'http://localhost:3002'}/support-tickets`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/support-tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
