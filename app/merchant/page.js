@@ -1095,25 +1095,114 @@ export default function MerchantLandingPage() {
               </div>
             </Link>
 
-            {/* Template 6 (Coming Soon Placeholder) */}
-            <div className="bg-gray-50/50 rounded-[24px] border border-gray-200 overflow-hidden flex flex-col">
-              <div className="relative aspect-[4/5] w-full bg-gray-100/50 flex flex-col items-center justify-center border-b border-gray-200">
-                <div className="text-gray-300">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
-                    <line x1="8" y1="21" x2="16" y2="21"></line>
-                    <line x1="12" y1="17" x2="12" y2="21"></line>
-                  </svg>
+            {/* Template 6 */}
+            <Link href="/template6" className="bg-white rounded-[24px] border border-gray-100 overflow-hidden shadow-xl shadow-gray-200/50 flex flex-col hover:-translate-y-1.5 transition-all duration-300 group cursor-pointer">
+              <div className="relative aspect-[4/5] w-full bg-white flex flex-col border-b border-gray-100 overflow-hidden">
+                {/* Browser Top Bar */}
+                <div className="h-4 bg-gray-100 border-b border-gray-200 flex items-center px-2.5 gap-1 w-full shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-red-400"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-green-400"></div>
                 </div>
-                <p className="text-sm font-semibold text-gray-400 mt-4">More Templates</p>
-                <p className="text-xs text-gray-400 mt-1">Coming Soon</p>
+                
+                {/* Slate Blue Navbar Mockup */}
+                <div className="h-6 bg-[#4d5885] border-b border-indigo-900/20 flex items-center justify-between px-3 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 border-[1.5px] border-white rotate-45 flex items-center justify-center">
+                      <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+                    </div>
+                    <div className="w-12 h-1 bg-white/90 rounded-sm"></div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-1 bg-white/60 rounded-sm"></div>
+                    <div className="w-4 h-1 bg-white/60 rounded-sm"></div>
+                    <div className="w-4 h-1 bg-white/60 rounded-sm"></div>
+                    <div className="w-2 h-2 rounded-full bg-white/70"></div>
+                  </div>
+                </div>
+                
+                {/* Hero section */}
+                <div className="flex shrink-0 p-2 gap-2 bg-[#faf6ed]" style={{height: '37%'}}>
+                  <div className="w-1/2 h-full relative rounded-md overflow-hidden shadow-sm">
+                    <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=300&q=80" alt="Bakery" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  </div>
+                  <div className="w-1/2 bg-white rounded-md p-1.5 flex flex-col justify-center gap-1 shadow-xs border border-gray-100">
+                    <div className="w-16 h-2 bg-[#1f284c] rounded-sm"></div>
+                    <div className="w-12 h-1.5 bg-[#d4a329] rounded-sm"></div>
+                    <div className="w-full h-0.5 bg-gray-200 rounded-sm mt-0.5"></div>
+                    <div className="w-3/4 h-0.5 bg-gray-200 rounded-sm"></div>
+                    <div className="w-10 h-2 border border-[#d4a329] rounded-full mt-1"></div>
+                  </div>
+                </div>
+
+                {/* Our Heritage Strip */}
+                <div className="bg-[#6f80a2] flex items-center gap-2 py-1.5 px-2.5 shrink-0 text-white">
+                   <div className="w-6 h-6 rounded-sm overflow-hidden shrink-0">
+                     <img src="https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=60&q=60" alt="" className="w-full h-full object-cover" />
+                   </div>
+                   <div className="flex-1 space-y-0.5">
+                     <div className="w-14 h-1 bg-[#f1bb48] rounded-sm"></div>
+                     <div className="w-20 h-0.5 bg-white/70 rounded-sm"></div>
+                   </div>
+                </div>
+
+                {/* Citrus Sweets products row */}
+                <div className="flex-1 bg-[#ece4d9] px-2 py-1.5 flex flex-col justify-center gap-1">
+                  <div className="w-14 h-1 bg-gray-700 rounded-sm mx-auto mb-0.5"></div>
+                  <div className="flex gap-1.5 justify-center">
+                    {[
+                      "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=80&q=60",
+                      "https://images.unsplash.com/photo-1519869325930-281384150729?auto=format&fit=crop&w=80&q=60",
+                      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=80&q=60"
+                    ].map((src, i) => (
+                      <div key={i} className="flex-1 bg-white rounded-sm overflow-hidden shadow-xs border border-gray-200 p-0.5 flex flex-col">
+                        <div className="aspect-[4/3] w-full overflow-hidden rounded-xs mb-0.5">
+                          <img src={src} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="w-full h-0.5 bg-gray-300 rounded-sm mb-0.5"></div>
+                        <div className="w-1/2 h-0.5 bg-[#d4a329] rounded-sm"></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="absolute top-7 right-2 z-20 bg-[#f3b12a] text-white text-[8px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-md">
+                  NEW
+                </div>
               </div>
-              <div className="p-5 flex-1 flex flex-col gap-3 bg-white/50">
-                 <div className="w-3/4 h-4 bg-gray-200 rounded-sm"></div>
-                 <div className="w-1/2 h-3 bg-gray-200 rounded-sm mt-1"></div>
-                 <div className="w-1/3 h-5 bg-gray-200 rounded-full mt-2"></div>
+
+              <div className="p-5 flex-1 flex flex-col gap-3 bg-white relative z-30">
+                {/* Top row: name + template no */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-extrabold text-sm text-gray-900 leading-tight">Bakery & Cafe</h4>
+                    <p className="text-[11px] text-gray-400 mt-0.5">Warm & Artisanal</p>
+                  </div>
+                  <span className="shrink-0 text-[10px] font-bold text-[#4d5885] bg-[#4d5885]/10 border border-[#4d5885]/20 px-2 py-0.5 rounded-full">
+                    #6
+                  </span>
+                </div>
+
+                {/* Badges row */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                    <svg width="9" height="9" viewBox="0 0 10 10" fill="none" className="shrink-0"><circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.4"/><path d="M3 5l1.5 1.5L7 3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Six Page Website
+                  </span>
+                </div>
+
+                {/* Price + CTA */}
+                <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-100">
+                  <div>
+                    <span className="text-base font-extrabold text-gray-900">₹5999</span>
+                    <span className="text-[10px] text-gray-400 ml-1">/one-time</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-[#4d5885] group-hover:underline flex items-center gap-0.5">
+                    Preview <ChevronRight size={13} />
+                  </span>
+                </div>
               </div>
-            </div>
+            </Link>
           </div>
         </FadeInScroll>
       </section>

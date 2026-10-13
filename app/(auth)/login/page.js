@@ -75,7 +75,7 @@ export default function LoginPage() {
 
   const handleForgotPassword = () => {
     const cleanEmail = email.trim().toLowerCase();
-    router.push(cleanEmail ? `/check-email?email=${encodeURIComponent(cleanEmail)}` : "/check-email");
+    router.push(cleanEmail ? `/check-email?email=${encodeURIComponent(cleanEmail)}&from=user` : "/check-email?from=user");
   };
 
   const handleLogin = async (e) => {

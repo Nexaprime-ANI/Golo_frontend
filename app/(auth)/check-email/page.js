@@ -28,7 +28,7 @@ function CheckEmailContent() {
   const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [accountType, setAccountType] = useState("");
+  const [accountType, setAccountType] = useState(() => searchParams.get("from") === "merchant" ? "merchant" : "user");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -90,9 +90,11 @@ function CheckEmailContent() {
 
     setLoading(true);
     try {
-      const response = await sendForgotPasswordOTP(cleanEmail);
+      const response = await sendForgotPasswordOTP(cleanEmail, accountType);
       setEmail(cleanEmail);
-      setAccountType(response?.data?.accountType || "");
+      if (response?.data?.accountType) {
+        setAccountType(response.data.accountType);
+      }
       setMessage(
         response?.data?.accountType === "merchant"
           ? "Merchant password reset OTP sent successfully."
@@ -118,7 +120,7 @@ function CheckEmailContent() {
 
     setLoading(true);
     try {
-      await verifyForgotPasswordOTP(email, cleanOtp);
+      await verifyForgotPasswordOTP(email, cleanOtp, accountType);
       setOtp(cleanOtp);
       setMessage("OTP verified. Set your new password now.");
       setStep("password");
@@ -145,10 +147,12 @@ function CheckEmailContent() {
 
     setLoading(true);
     try {
-      await resetForgotPassword(email, otp, newPassword);
+      const response = await resetForgotPassword(email, otp, newPassword, accountType);
+      const targetAccountType = response?.data?.accountType || accountType;
+      const loginPath = targetAccountType === "merchant" ? "/merchant-login" : "/login";
       setMessage("Password changed successfully. Redirecting to login...");
       setStep("success");
-      setTimeout(() => router.push("/login"), 1400);
+      setTimeout(() => router.push(loginPath), 1400);
     } catch (apiError) {
       setError(getErrorMessage(apiError, "Failed to change password. Please try again."));
     } finally {
@@ -161,7 +165,7 @@ function CheckEmailContent() {
     clearFeedback();
     setLoading(true);
     try {
-      await sendForgotPasswordOTP(email);
+      await sendForgotPasswordOTP(email, accountType);
       setOtp("");
       setMessage("A fresh OTP has been sent to your email.");
     } catch (apiError) {
@@ -183,7 +187,7 @@ function CheckEmailContent() {
         <div className={`check-email-card ${styles.card}`}>
           <div className="top-g-box">A</div>
 
-          <Link href="/login" className={styles.backLink}>
+          <Link href={accountType === "merchant" ? "/merchant-login" : "/login"} className={styles.backLink}>
             <ArrowLeft size={17} />
             Back to login
           </Link>
@@ -313,7 +317,7 @@ function CheckEmailContent() {
               )}
 
               {step === "success" && (
-                <button className={`primary-orange-btn ${styles.submitButton}`} onClick={() => router.push("/login")}>
+                <button className={`primary-orange-btn ${styles.submitButton}`} onClick={() => router.push(accountType === "merchant" ? "/merchant-login" : "/login")}>
                   Go to Login
                 </button>
               )}
@@ -322,7 +326,7 @@ function CheckEmailContent() {
 
           <div className="register-footer">
             New to AjuBaju?{" "}
-            <Link href="/register" className="font-bold cursor-pointer">
+            <Link href={accountType === "merchant" ? "/merchant-register" : "/register"} className="font-bold cursor-pointer">
               Register Now
             </Link>
           </div>

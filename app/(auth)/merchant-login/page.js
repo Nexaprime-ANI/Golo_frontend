@@ -131,7 +131,10 @@ export default function MerchantLoginPage() {
 
   const handleForgotPassword = () => {
     const cleanEmail = email.trim().toLowerCase();
-    router.push(cleanEmail ? `/check-email?email=${encodeURIComponent(cleanEmail)}` : "/check-email");
+    const base = cleanEmail
+      ? `/check-email?email=${encodeURIComponent(cleanEmail)}&from=merchant`
+      : "/check-email?from=merchant";
+    router.push(base);
   };
 
   const handleLogin = async (e) => {

@@ -427,24 +427,24 @@ export async function logoutUser() {
     });
 }
 
-export async function sendForgotPasswordOTP(email) {
+export async function sendForgotPasswordOTP(email, accountType) {
     return apiClient('/users/forgot-password/send-otp', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, accountType }),
     });
 }
 
-export async function verifyForgotPasswordOTP(email, otp) {
+export async function verifyForgotPasswordOTP(email, otp, accountType) {
     return apiClient('/users/forgot-password/verify-otp', {
         method: 'POST',
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ email, otp, accountType }),
     });
 }
 
-export async function resetForgotPassword(email, otp, newPassword) {
+export async function resetForgotPassword(email, otp, newPassword, accountType) {
     return apiClient('/users/forgot-password/reset', {
         method: 'POST',
-        body: JSON.stringify({ email, otp, newPassword }),
+        body: JSON.stringify({ email, otp, newPassword, accountType }),
     });
 }
 
