@@ -1,4 +1,5 @@
-import { getPublicMerchantProductById } from "../../lib/api/merchant";;
+import { redirect } from "next/navigation";
+import { getPublicMerchantProductById } from "../../lib/api/merchant";
 import ProductClient from "./ProductClient";
 
 export async function generateMetadata(props) {
@@ -58,7 +59,20 @@ export async function generateMetadata(props) {
   }
 }
 
-export default function ProductPage() {
+export default async function ProductPage(props) {
+  const searchParams = await props.searchParams;
+  const id = searchParams?.id;
+
+  if (!id && (searchParams?.q || searchParams?.location)) {
+    const params = new URLSearchParams();
+    for (const [key, val] of Object.entries(searchParams || {})) {
+      if (val !== undefined && val !== null && val !== "") {
+        params.set(key, String(val));
+      }
+    }
+    redirect(`/nearby-deals?${params.toString()}`);
+  }
+
   // The client component reads searchParams via useSearchParams()
   return <ProductClient />;
 }

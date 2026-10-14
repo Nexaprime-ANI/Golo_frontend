@@ -8,7 +8,7 @@ import dynamic from "next/dynamic";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import { getNearbyOffers } from "../../lib/api/ads";
-import { getPublicMerchantProducts, getPublicMerchantProfile, getPublicMerchantStoreLocation, getPublicMerchantReviewStats, toggleFollowMerchant, checkFollowStatus } from "../../lib/api/merchant";;
+import { getPublicMerchantProducts, getPublicMerchantProfile, getPublicMerchantStoreLocation, getPublicMerchantReviewStats, toggleFollowMerchant, checkFollowStatus } from "../../lib/api/merchant";
 
 // Dynamically import Leaflet map
 const LeafletMap = dynamic(() => import("../../components/LeafletMap"), { ssr: false });
@@ -101,6 +101,9 @@ function NearbyStoreContent() {
       }
     } else {
       setMerchantId(null);
+      if (searchParams.get("q") || searchParams.get("location")) {
+        router.replace(`/nearby-deals?${searchParams.toString()}`);
+      }
     }
   }, [searchParams]);
 

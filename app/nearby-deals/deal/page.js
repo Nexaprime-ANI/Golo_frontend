@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import DealClient from "./DealClient";
 
 function getAbsoluteUrl(path) {
@@ -12,6 +13,12 @@ export async function generateMetadata(props) {
   const offerId = searchParams?.offerId;
   
   if (!offerId) {
+    if (searchParams?.q || searchParams?.location) {
+      return {
+        title: "Search Nearby Deals | AjuBaju",
+        description: "Browse nearby deals, offers, and local merchants on AjuBaju."
+      };
+    }
     return {
       title: "Offer not found | AjuBaju",
       description: "This offer does not exist or has been removed."
@@ -86,5 +93,19 @@ export async function generateMetadata(props) {
 }
 
 export default async function DealPage(props) {
+  const searchParams = await props.searchParams;
+  const offerId = searchParams?.offerId;
+
+  // If a search query or location was passed instead of an offerId, redirect to the search/deals page
+  if (!offerId && (searchParams?.q || searchParams?.location)) {
+    const params = new URLSearchParams();
+    for (const [key, val] of Object.entries(searchParams || {})) {
+      if (val !== undefined && val !== null && val !== "") {
+        params.set(key, String(val));
+      }
+    }
+    redirect(`/nearby-deals?${params.toString()}`);
+  }
+
   return <DealClient />;
 }

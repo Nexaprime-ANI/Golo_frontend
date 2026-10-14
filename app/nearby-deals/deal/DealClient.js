@@ -20,13 +20,14 @@ import {
   AlertCircle,
   Check,
   ArrowLeft,
+  ShoppingBag,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useVoucher } from "../../context/VoucherContext";
 import AuthRequiredModal from "../../components/AuthRequiredModal";
 import { getNearbyOfferDetails, getNearbyOffers } from "../../lib/api/ads";
 import { toggleWishlist, getAdWishlistCount, getWishlistIds } from "../../lib/api/user";
-import { getOfferReviews, getPublicMerchantProductById, getPublicMerchantProducts } from "../../lib/api/merchant";;
+import { getOfferReviews, getPublicMerchantProductById, getPublicMerchantProducts } from "../../lib/api/merchant";
 import Navbar from "../../components/Navbar";
 import { reverseGeocode } from "../../services/leafletService";
 import Footer from "../../components/Footer";
@@ -230,6 +231,15 @@ function NearbyDealDetailsContent() {
   const [reportError, setReportError] = useState("");
 
   const offerId = searchParams.get("offerId") || "";
+  const qParam = searchParams.get("q");
+  const locParam = searchParams.get("location");
+
+  useEffect(() => {
+    if (!offerId && (qParam || locParam)) {
+      const p = new URLSearchParams(searchParams.toString());
+      router.replace(`/nearby-deals?${p.toString()}`);
+    }
+  }, [offerId, qParam, locParam, searchParams, router]);
   const nowTs = Date.now();
   const offerStartsTs = offer?.startsAt ? new Date(offer.startsAt).getTime() : null;
   const offerEndsTs = offer?.endsAt ? new Date(offer.endsAt).getTime() : null;
@@ -385,7 +395,9 @@ function NearbyDealDetailsContent() {
   useEffect(() => {
     const loadOffer = async () => {
       if (!offerId) {
-        setLoadError("Offer ID is missing.");
+        if (!qParam && !locParam) {
+          setLoadError("Offer not found or link is incomplete.");
+        }
         setLoadingOffer(false);
         return;
       }
@@ -697,10 +709,33 @@ function NearbyDealDetailsContent() {
     return (
       <main className="min-h-screen bg-[#F3F3F3]">
         <Navbar />
-        <div className="mx-auto max-w-[1260px] px-6 py-20">
-          <div className="rounded-xl border border-[#fecaca] bg-[#fff1f2] p-6 text-sm text-[#b91c1c]">
-            {loadError || "Offer not found."}
+        <div className="mx-auto max-w-[800px] px-6 py-16 md:py-24 text-center">
+          <div className="bg-white rounded-3xl p-8 md:p-12 shadow-sm border border-gray-100 flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 mb-5">
+              <ShoppingBag size={32} />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Offer Not Available</h1>
+            <p className="text-gray-500 text-sm md:text-base max-w-md mb-8">
+              {loadError || "The offer you are looking for may have expired, ended, or has been removed."}
+            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <button
+                onClick={() => router.push("/nearby-deals")}
+                className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#111] text-white font-semibold text-sm hover:bg-black transition-colors shadow-sm"
+              >
+                Explore Nearby Deals
+              </button>
+              <button
+                onClick={() => router.back()}
+                className="w-full sm:w-auto px-6 py-3 rounded-full border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition-colors"
+              >
+                Go Back
+              </button>
+            </div>
           </div>
+
+
+
         </div>
         <Footer />
       </main>

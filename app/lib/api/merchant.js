@@ -1,4 +1,4 @@
-import { apiClient, API_BASE_URL, API_ORIGIN_URL } from './core';
+import { apiClient, API_BASE_URL, API_ORIGIN_URL, getStoredAccessToken } from './core';
 export async function getUserReportStats() {
     return apiClient('/users/admin/reports/stats');
 }

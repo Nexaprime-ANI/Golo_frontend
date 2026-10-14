@@ -599,6 +599,10 @@ function NavbarContent({
       params.set("lng", String(resolvedCoordinates.lng));
     }
 
+    const isNearbyDetailSurface =
+      pathname.startsWith("/nearby-deals/deal") ||
+      pathname.startsWith("/nearby-deals/store") ||
+      pathname.startsWith("/nearby-deals/product");
     const isNearbySurface = pathname.startsWith("/nearby-deals");
     const isUserSurface =
       pathname === "/my-deals" ||
@@ -607,11 +611,13 @@ function NavbarContent({
       pathname.startsWith("/profile");
     const isCategorySurface = pathname.startsWith("/category/");
     const targetBase = 
-      trimmedSearch !== "" && (pathname === "/" || isUserSurface)
+      trimmedSearch !== ""
         ? "/nearby-deals"
-        : (isCategorySurface || isNearbySurface || pathname === "/" || isUserSurface || pathname.startsWith("/merchant"))
-          ? pathname
-          : "/choja";
+        : (isNearbyDetailSurface || pathname === "/" || isUserSurface)
+          ? "/nearby-deals"
+          : (isCategorySurface || isNearbySurface || pathname.startsWith("/merchant"))
+            ? pathname
+            : "/choja";
 
     // Nearby deals browsing (including location/city filtering) should work without auth.
     if (!isAuthenticated && targetBase !== "/nearby-deals" && targetBase !== "/") {

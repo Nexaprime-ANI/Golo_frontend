@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 export default function HelpCenterPage() {
   const [formData, setFormData] = useState({
     customerName: "",
+    contactNo: "",
     email: "",
     issueType: "",
     description: "",
@@ -23,7 +24,7 @@ export default function HelpCenterPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.customerName || !formData.email || !formData.issueType || !formData.description) {
+    if (!formData.customerName || !formData.email || !formData.contactNo || !formData.issueType || !formData.description) {
       setErrorMessage("Please fill in all required fields.");
       return;
     }
@@ -45,7 +46,7 @@ export default function HelpCenterPage() {
       if (!res.ok) throw new Error("Failed to submit support ticket");
 
       setStatus("success");
-      setFormData({ customerName: "", email: "", issueType: "", description: "" });
+      setFormData({ customerName: "", contactNo: "", email: "", issueType: "", description: "" });
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -127,6 +128,19 @@ export default function HelpCenterPage() {
                     />
                   </div>
 
+                  {/* Contact Number */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">Contact No. <span className="text-red-500">*</span></label>
+                    <input
+                      type="tel"
+                      name="contactNo"
+                      value={formData.contactNo}
+                      onChange={handleChange}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#f3b22a] focus:ring-2 focus:ring-[#f3b22a]/20 outline-none transition-all"
+                    />
+                  </div>
+
                   {/* Email */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700">Email Address <span className="text-red-500">*</span></label>
@@ -139,24 +153,24 @@ export default function HelpCenterPage() {
                       className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#f3b22a] focus:ring-2 focus:ring-[#f3b22a]/20 outline-none transition-all"
                     />
                   </div>
-                </div>
 
-                {/* Issue Type */}
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-gray-700">What do you need help with? <span className="text-red-500">*</span></label>
-                  <select
-                    name="issueType"
-                    value={formData.issueType}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#f3b22a] focus:ring-2 focus:ring-[#f3b22a]/20 outline-none transition-all bg-white"
-                  >
-                    <option value="" disabled>Select a topic</option>
-                    <option value="General Inquiry">General Inquiry</option>
-                    <option value="Billing & Payments">Billing & Payments</option>
-                    <option value="Technical Issue">Technical Issue</option>
-                    <option value="Report a Listing or User">Report a Listing or User</option>
-                    <option value="Feature Request">Feature Request</option>
-                  </select>
+                  {/* Issue Type */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-gray-700">What do you need help with? <span className="text-red-500">*</span></label>
+                    <select
+                      name="issueType"
+                      value={formData.issueType}
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#f3b22a] focus:ring-2 focus:ring-[#f3b22a]/20 outline-none transition-all bg-white"
+                    >
+                      <option value="" disabled>Select a topic</option>
+                      <option value="General Inquiry">General Inquiry</option>
+                      <option value="Billing & Payments">Billing & Payments</option>
+                      <option value="Technical Issue">Technical Issue</option>
+                      <option value="Report a Listing or User">Report a Listing or User</option>
+                      <option value="Feature Request">Feature Request</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Description */}
