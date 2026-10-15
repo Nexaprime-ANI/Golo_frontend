@@ -210,6 +210,75 @@ export default function Footer() {
             </div>
           </div>
         </div>
+
+        {/* SEO Silo: Popular Cities, Categories & Classifieds */}
+        <div className="border-t border-[#d88c1b] pt-8 mt-10">
+          <div className="space-y-4 text-[12.5px] leading-relaxed text-[#4c3a16]">
+            {/* Section 1: Popular Cities for Local Deals */}
+            <div>
+              <span className="font-bold text-[#241a07] uppercase tracking-wider block sm:inline mr-2 text-[12px]">
+                Popular Cities for Deals & Savings:
+              </span>
+              <span className="inline-flex flex-wrap gap-x-2 gap-y-1">
+                <Link href="/nearby-deals?location=Kolhapur" className="hover:text-[#111] hover:underline">Kolhapur Deals</Link> •
+                <Link href="/nearby-deals?location=Sangli" className="hover:text-[#111] hover:underline">Sangli Store Discounts</Link> •
+                <Link href="/nearby-deals?location=Ichalkaranji" className="hover:text-[#111] hover:underline">Ichalkaranji Offers</Link> •
+                <Link href="/nearby-deals?location=Pune" className="hover:text-[#111] hover:underline">Pune Local Deals</Link> •
+                <Link href="/nearby-deals?location=Satara" className="hover:text-[#111] hover:underline">Satara Savings</Link> •
+                <Link href="/nearby-deals?location=Mumbai" className="hover:text-[#111] hover:underline">Mumbai Deals</Link>
+              </span>
+            </div>
+
+            {/* Section 2: Top Deals & Discount Categories */}
+            <div>
+              <span className="font-bold text-[#241a07] uppercase tracking-wider block sm:inline mr-2 text-[12px]">
+                Top Store Offers & Discount Categories:
+              </span>
+              <span className="inline-flex flex-wrap gap-x-2 gap-y-1">
+                <Link href="/nearby-deals?category=Food%20%26%20Dining" className="hover:text-[#111] hover:underline">Restaurant Offers & Food Vouchers</Link> •
+                <Link href="/nearby-deals?category=Fashion%20%26%20Apparel" className="hover:text-[#111] hover:underline">Clothing & Fashion Discounts</Link> •
+                <Link href="/nearby-deals?category=Electronics%20%26%20Appliances" className="hover:text-[#111] hover:underline">Electronics & Gadget Deals</Link> •
+                <Link href="/nearby-deals?category=Beauty%20%26%20Salon" className="hover:text-[#111] hover:underline">Beauty & Salon Coupons</Link> •
+                <Link href="/nearby-deals?category=Supermarket%20%26%20Groceries" className="hover:text-[#111] hover:underline">Supermarket & Grocery Savings</Link> •
+                <Link href="/nearby-deals?category=Health%20%26%20Wellness" className="hover:text-[#111] hover:underline">Health & Wellness Discounts</Link>
+              </span>
+            </div>
+
+            {/* Section 3: Choja Classifieds (Cheaper Than OLX Alternative) */}
+            <div>
+              <span className="font-bold text-[#241a07] uppercase tracking-wider block sm:inline mr-2 text-[12px]">
+                Choja Classifieds (Cheaper Than OLX):
+              </span>
+              <span className="inline-flex flex-wrap gap-x-2 gap-y-1">
+                <Link href="/choja?category=Mobiles%20%26%20Tablets" className="hover:text-[#111] hover:underline">Used Mobile Phones</Link> •
+                <Link href="/choja?category=Vehicles%20%26%20Bikes" className="hover:text-[#111] hover:underline">Second Hand Bikes & Two-Wheelers</Link> •
+                <Link href="/choja?category=Vehicles%20%26%20Bikes" className="hover:text-[#111] hover:underline">Used Cars in Maharashtra</Link> •
+                <Link href="/choja?category=Furniture%20%26%20Living" className="hover:text-[#111] hover:underline">Second Hand Furniture</Link> •
+                <Link href="/choja?category=Electronics%20%26%20Appliances" className="hover:text-[#111] hover:underline">Pre-owned Laptops & Electronics</Link> •
+                <Link href="/choja?category=Services" className="hover:text-[#111] hover:underline">Local Repair & Home Services</Link> •
+                <Link href="/post-ad" className="hover:text-[#111] hover:underline font-semibold">Post Ads Cheaper Than OLX</Link>
+              </span>
+            </div>
+
+            {/* Section 4: Popular Searches & OLX Interception */}
+            <div>
+              <span className="font-bold text-[#241a07] uppercase tracking-wider block sm:inline mr-2 text-[12px]">
+                Trending Searches & OLX Alternatives:
+              </span>
+              <span className="inline-flex flex-wrap gap-x-2 gap-y-1">
+                <Link href="/choja?q=olx" className="hover:text-[#111] hover:underline font-semibold">Sites Like OLX India</Link> •
+                <Link href="/choja?q=kolhapur" className="hover:text-[#111] hover:underline">OLX Alternative Kolhapur</Link> •
+                <Link href="/choja?category=Mobiles%20%26%20Tablets" className="hover:text-[#111] hover:underline">OLX Second Hand Mobiles</Link> •
+                <Link href="/choja?category=Vehicles%20%26%20Bikes" className="hover:text-[#111] hover:underline">OLX Used Bikes Maharashtra</Link> •
+                <Link href="/post-ad" className="hover:text-[#111] hover:underline font-semibold">Ad Posting Cheaper Than OLX</Link> •
+                <Link href="/nearby-deals?q=kolhapur" className="hover:text-[#111] hover:underline">Kolhapur Deals Today</Link> •
+                <Link href="/nearby-deals?q=restaurant" className="hover:text-[#111] hover:underline">Nearby Dining Offers</Link> •
+                <Link href="/nearby-deals?sort=topRated" className="hover:text-[#111] hover:underline">Top Rated Local Stores</Link> •
+                <Link href="/nearby-deals?q=discount" className="hover:text-[#111] hover:underline">Best Discount Vouchers</Link>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Bottom Copyright Bar */}
