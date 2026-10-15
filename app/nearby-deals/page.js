@@ -715,7 +715,6 @@ function NearbyDealsPageContent() {
           setProductPage(1);
           setOfferPage(1);
           const res = await unifiedSearch(query, { type: 'all', limit: 16, page: 1 });
-          if (fetchSeq !== nearbyFetchSeqRef.current) return;
           
           const unifiedMerchants = res?.data?.merchants || [];
           const unifiedProducts = res?.data?.products || [];
@@ -768,9 +767,6 @@ function NearbyDealsPageContent() {
     query,
     selectedCategory,
     sortBy,
-    // NOTE: userCoordinates intentionally NOT in deps.
-    // GPS is used only for initial coordinates and client-side re-sort.
-    // Putting it here would cause a double-fetch on every GPS update.
     manualLatitude,
     manualLongitude,
     selectedTypeLabels,
@@ -779,49 +775,13 @@ function NearbyDealsPageContent() {
   ]);
 
   // When GPS coordinates arrive (or change significantly), re-sort the
-  // already-loaded results client-side instead of firing a full re-fetch.
-  // Only trigger a real re-fetch if the user moved > 2 km from last fetch.
+  // already-loaded results client-side with exact distances without disrupting active search.
   useEffect(() => {
     if (!userCoordinates) return;
-    const last = lastFetchedCoordsRef.current;
-    if (last) {
-      const dist = calculateDistanceKm(last.lat, last.lng, userCoordinates.lat, userCoordinates.lng);
-      if (dist < 2) {
-        // Small movement — just re-sort existing results in place, no re-fetch
-        setRawOffers((prev) =>
-          [...prev].map((row) => withResolvedDistance(row, userCoordinates.lat, userCoordinates.lng))
-        );
-        return;
-      }
-    }
-    // Large movement or first GPS lock — record coords and let the main effect re-fetch
     lastFetchedCoordsRef.current = { lat: userCoordinates.lat, lng: userCoordinates.lng };
-    // Bump the sequence so any stale fetch is discarded
-    nearbyFetchSeqRef.current++;
-    setLoadingOffers(true);
-    setError("");
-    getNearbyOffers({
-      lat: userCoordinates.lat,
-      lng: userCoordinates.lng,
-      radiusKm: distanceRadius,
-      location: location || undefined,
-      q: query || undefined,
-      category: selectedCategory || undefined,
-      sort: sortBy,
-      maxPrice: priceRange < 5000 ? priceRange : undefined,
-      applyPriceFilter: priceRange < 5000,
-      offerTypes: selectedTypeLabels.join(","),
-      topDiscountOnly,
-      activeNowOnly,
-      page: 1,
-      limit: 500,
-    }).then((response) => {
-      const rows = Array.isArray(response?.data)
-        ? response.data.map(normalizeNearbyOffer).map((r) => withResolvedDistance(r, userCoordinates.lat, userCoordinates.lng))
-        : [];
-      setRawOffers((prev) => (rows.length > 0 ? rows : prev));
-      setLoadingOffers(false);
-    }).catch(() => setLoadingOffers(false));
+    setRawOffers((prev) =>
+      [...prev].map((row) => withResolvedDistance(row, userCoordinates.lat, userCoordinates.lng))
+    );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userCoordinates?.lat, userCoordinates?.lng]);
 
