@@ -1,7 +1,7 @@
 # ==============================
 # Builder Stage
 # ==============================
-FROM node:20-bullseye-slim AS builder
+FROM node:20-bookworm-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -38,7 +38,7 @@ RUN npm run build
 # ==============================
 # Production Stage
 # ==============================
-FROM node:20-bullseye-slim AS runner
+FROM node:20-bookworm-slim AS runner
 
 ARG NEXT_PUBLIC_API_URL
 ENV NODE_ENV=production
