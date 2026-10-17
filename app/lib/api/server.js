@@ -23,7 +23,7 @@ export function getServerAuthToken() {
 export async function serverApiClient(endpoint, options = {}) {
     const BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, '') || '';
     if (!BASE_URL) {
-        throw new Error('NEXT_PUBLIC_API_URL is missing.');
+        throw new Error('API service is unavailable.');
     }
 
     const token = getServerAuthToken();

@@ -241,17 +241,25 @@ function NearbyDealDetailsContent() {
     }
   }, [offerId, qParam, locParam, searchParams, router]);
   const nowTs = Date.now();
-  const offerStartsTs = offer?.startsAt ? new Date(offer.startsAt).getTime() : null;
-  const offerEndsTs = offer?.endsAt ? new Date(offer.endsAt).getTime() : null;
+  const rawStart = offer?.startsAt || offer?.startDate;
+  const rawEnd = offer?.endsAt || offer?.endDate || offer?.validUntil;
+  const offerStartsTs = rawStart ? new Date(rawStart).getTime() : null;
+  const offerEndsTs = rawEnd ? new Date(rawEnd).getTime() : null;
   const offerActiveNow =
-    offerStartsTs !== null &&
-    offerEndsTs !== null &&
-    !Number.isNaN(offerStartsTs) &&
-    !Number.isNaN(offerEndsTs) &&
-    offerStartsTs <= nowTs &&
-    offerEndsTs >= nowTs;
+    offer?.isActiveNow !== undefined
+      ? Boolean(offer.isActiveNow)
+      : (!offerStartsTs || offerStartsTs <= nowTs) &&
+        (!offerEndsTs || offerEndsTs >= nowTs);
 
   const allowClaim = Boolean(offerActiveNow);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("golo_nearby_offers_primary_unsupported");
+      } catch {}
+    }
+  }, []);
 
   useEffect(() => {
     if (!offerId) {
@@ -411,8 +419,9 @@ function NearbyDealDetailsContent() {
         setLoadingOffer(true);
         setLoadError("");
         const response = await getNearbyOfferDetails(offerId);
-        if (response?.data) {
-          setOffer(response.data);
+        const resolvedOffer = response?.data || (response && (response.offerId || response.title) ? response : null);
+        if (resolvedOffer) {
+          setOffer(resolvedOffer);
         }
       } catch (err) {
         if (!cachedOffer) {
@@ -639,7 +648,7 @@ function NearbyDealDetailsContent() {
     setReportError("");
 
     try {
-      const BASE_URL = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_USER_API_URL || "http://localhost:3002").replace(/\/$/, "");
+      const BASE_URL = "/api/proxy";
       const token = localStorage.getItem("accessToken");
       const res = await fetch(`${BASE_URL}/offers/${offerId}/report`, {
         method: "POST",

@@ -172,8 +172,8 @@ export default function AddProductPage() {
         stockQuantity: Number(stockQuantity),
         price: Number(regularPrice),
         description: description.trim(),
-        images: uploadedUrls,
-        videoUrl: uploadedVideoUrl,
+        images: uploadedUrls.filter((u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://'))),
+        videoUrl: uploadedVideoUrl && (uploadedVideoUrl.startsWith('http://') || uploadedVideoUrl.startsWith('https://')) ? uploadedVideoUrl : undefined,
       };
       
       console.log("SENDING PRODUCT PAYLOAD:", payload);

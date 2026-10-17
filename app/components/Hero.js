@@ -81,7 +81,6 @@ export default function Hero() {
   const [slides, setSlides] = useState([]);
   const [current, setCurrent] = useState(0);
   const [isHovered, setIsHovered] = useState(false);
-  const [debugInfo, setDebugInfo] = useState("");
   const [loading, setLoading] = useState(true);
   const failedUrlsRef = useRef(new Set());
 
@@ -240,14 +239,18 @@ export default function Hero() {
         if (isMounted) {
           const clamped = finalSlides.slice(0, MAX_SLIDES);
           setSlides(clamped);
-          setDebugInfo(`Showing ${clamped.length} banners`);
           setCurrent(0);
         }
-      } catch (error) {
+      } catch {
         if (isMounted) {
-          console.error("[Hero] Error loading approved banners:", error);
-          setDebugInfo(`Error: ${error?.message || "Failed to load banners"}`);
-          setSlides([]);
+          // Gracefully fallback to default platform banners if backend is temporarily unreachable
+          const defaultPlatformBanners = [
+            { url: "/images/platform-banners/platform_banner_1.png", href: null, isFallback: true, id: "fallback_0" },
+            { url: "/images/platform-banners/platform_banner_2.png", href: null, isFallback: true, id: "fallback_1" },
+            { url: "/images/platform-banners/platform_banner_3.jpg", href: null, isFallback: true, id: "fallback_2" },
+            { url: "/images/platform-banners/platform_banner_4.png", href: null, isFallback: true, id: "fallback_3" },
+          ];
+          setSlides(defaultPlatformBanners);
         }
       } finally {
         if (isMounted) {
@@ -339,15 +342,6 @@ export default function Hero() {
   }
 
   if (!slides.length) {
-    if (process.env.NODE_ENV !== "production") {
-      return (
-        <section className="relative w-full overflow-hidden bg-[#F8F6F2]">
-          <div className="relative w-full h-[220px] flex items-center justify-center text-[12px] text-gray-600">
-            {debugInfo || "No approved banners returned by API"}
-          </div>
-        </section>
-      );
-    }
     return null;
   }
 
@@ -400,6 +394,7 @@ export default function Hero() {
                         src={slide.url}
                         alt={`Slide ${index + 1}`}
                         fill
+                        unoptimized={!isRemoteUrl(slide.url)}
                         priority={index === 0}
                         sizes="100vw"
                         className="object-fill object-center rounded-[20px] sm:rounded-[32px]"
@@ -423,6 +418,7 @@ export default function Hero() {
                         src={slide.url}
                         alt={`Slide ${index + 1}`}
                         fill
+                        unoptimized={!isRemoteUrl(slide.url)}
                         priority={index === 0}
                         sizes="100vw"
                         className="object-fill object-center rounded-[20px] sm:rounded-[32px]"

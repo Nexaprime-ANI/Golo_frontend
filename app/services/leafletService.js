@@ -218,11 +218,6 @@ export async function reverseGeocode(lng, lat) {
 
     const url = `${NOMINATIM_API_BASE}/reverse?${params.toString()}`;
     
-    console.log("📍 Reverse geocoding coordinates:", lat, lng);
-    
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -235,13 +230,11 @@ export async function reverseGeocode(lng, lat) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.error("❌ Reverse geocoding error:", response.status, response.statusText);
       return null;
     }
 
     const data = await response.json();
     if (data && data.address) {
-      console.log("✅ Reverse geocoding successful");
       return formatLocationDetails(data);
     }
 

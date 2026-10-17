@@ -11,8 +11,22 @@ function normalizeBackendApiBaseUrl(rawValue) {
     return normalizedValue.replace(/\/+$/, '');
 }
 
-export const API_BASE_URL = normalizeBackendApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
-export const API_ORIGIN_URL = API_BASE_URL;
+export const API_BASE_URL = typeof window !== 'undefined'
+    ? '/api/proxy'
+    : normalizeBackendApiBaseUrl(
+        process.env.INTERNAL_BACKEND_URL ||
+        process.env.BACKEND_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://localhost:3002'
+    );
+export const API_ORIGIN_URL = typeof window !== 'undefined'
+    ? window.location.origin
+    : normalizeBackendApiBaseUrl(
+        process.env.INTERNAL_BACKEND_URL ||
+        process.env.BACKEND_URL ||
+        process.env.NEXT_PUBLIC_API_URL ||
+        'http://localhost:3002'
+    );
 
 const _MASKED_BASE = '/media';
 // Capture the cloud name so it is preserved in the masked path: /media/<cloudname>/image/upload/...
@@ -96,11 +110,10 @@ export function clearStoredAuthTokens() {
 
 export async function apiClient(endpoint, options = {}) {
     if (!BASE_URL) {
-        const configError = new Error('NEXT_PUBLIC_API_URL is not configured');
+        const configError = new Error('Service is temporarily unavailable. Please try again later.');
         configError.status = 0;
         configError.data = {
-            message: 'Backend API URL is missing. Set NEXT_PUBLIC_API_URL in the frontend environment.',
-            endpoint,
+            message: 'Service is temporarily unavailable. Please try again later.',
         };
         throw configError;
     }
@@ -130,14 +143,11 @@ export async function apiClient(endpoint, options = {}) {
         response = await fetch(url, config);
     } catch (error) {
         const networkError = new Error(
-            `Unable to connect to API at ${BASE_URL}. ` +
-            `Please ensure the backend is running and NEXT_PUBLIC_API_URL is correct.`
+            'Unable to connect to server. Please check your internet connection or try again later.'
         );
         networkError.status = 0;
         networkError.data = {
-            message: networkError.message,
-            endpoint,
-            url,
+            message: 'Unable to connect to server. Please check your internet connection or try again later.',
         };
         networkError.cause = error;
         throw networkError;

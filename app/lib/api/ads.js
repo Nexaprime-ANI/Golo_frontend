@@ -185,22 +185,8 @@ export async function getNearbyOffers({
 }
 
 export async function getNearbyOfferDetails(offerId) {
-    const endpoint = `/offers/${offerId}`;
-
-    if (isNearbyOffersPrimaryUnsupported()) {
-        return fetchAbsoluteJson(`${LOCAL_BACKEND_URL}${endpoint}`);
-    }
-
-    try {
-        return await apiClient(endpoint);
-    } catch (error) {
-        if (error?.status !== 404) {
-            throw error;
-        }
-
-        markNearbyOffersPrimaryUnsupported();
-        return fetchAbsoluteJson(`${LOCAL_BACKEND_URL}${endpoint}`);
-    }
+    if (!offerId) throw new Error("Offer ID is required");
+    return apiClient(`/offers/${offerId}`);
 }
 
 // ============================================================
@@ -240,14 +226,14 @@ function markNearbyOffersPrimaryUnsupported() {
     }
 }
 
-function isNearbyOffersPrimaryUnsupported() {
-    if (nearbyOffersRouteMissingOnPrimary) return true;
-    if (typeof window === 'undefined') return false;
+if (typeof window !== 'undefined') {
     try {
-        return localStorage.getItem(NEARBY_OFFERS_PRIMARY_UNSUPPORTED_KEY) === '1';
-    } catch {
-        return false;
-    }
+        localStorage.removeItem(NEARBY_OFFERS_PRIMARY_UNSUPPORTED_KEY);
+    } catch {}
+}
+
+function isNearbyOffersPrimaryUnsupported() {
+    return false;
 }
 
 function emptyNearbyOffersResponse(page = 1, limit = 20) {
@@ -276,9 +262,9 @@ async function fetchAbsoluteJson(url) {
             credentials: 'include',
         });
     } catch (error) {
-        const networkError = new Error(`Unable to connect to ${url}`);
+        const networkError = new Error('Unable to connect to service. Please try again later.');
         networkError.status = 0;
-        networkError.data = { message: networkError.message, url };
+        networkError.data = { message: 'Unable to connect to service. Please try again later.' };
         networkError.cause = error;
         throw networkError;
     }

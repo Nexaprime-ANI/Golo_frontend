@@ -1,7 +1,10 @@
 /**
- * Cloudinary Configuration Service
- * Securely manages Cloudinary credentials and upload operations
+ * Cloudinary & Cloudflare Media Configuration Service
+ * Provides full backwards-compatibility for existing components while routing uploads
+ * through Cloudflare R2.
  */
+
+import { uploadToR2, isR2Configured, isValidR2Url } from './cloudflareR2Config.js';
 
 // Load from environment variables (frontend-safe values only)
 const CLOUDINARY_CONFIG = {
@@ -11,7 +14,7 @@ const CLOUDINARY_CONFIG = {
 };
 
 /**
- * Validate Cloudinary configuration
+ * Validate Cloudinary configuration (legacy)
  */
 export function validateCloudinaryConfig() {
     if (!CLOUDINARY_CONFIG.cloudName) {
@@ -24,9 +27,7 @@ export function validateCloudinaryConfig() {
 }
 
 /**
- * Get Cloudinary upload URL
- * @param {string} resourceType - Type of resource: 'image', 'video', 'auto'
- * @returns {string} - Full Cloudinary upload endpoint URL
+ * Get Cloudinary upload URL (legacy)
  */
 export function getCloudinaryUploadUrl(resourceType = 'image') {
     validateCloudinaryConfig();
@@ -34,35 +35,34 @@ export function getCloudinaryUploadUrl(resourceType = 'image') {
 }
 
 /**
- * Get Cloudinary configuration for client-side uploads
- * @returns {object} - Configuration object
+ * Get Cloudinary configuration for client-side uploads (legacy)
  */
 export function getCloudinaryConfig() {
-    validateCloudinaryConfig();
     return {
-        cloudName: CLOUDINARY_CONFIG.cloudName,
-        uploadPreset: CLOUDINARY_CONFIG.uploadPreset,
-        uploadUrl: getCloudinaryUploadUrl('image'),
+        cloudName: CLOUDINARY_CONFIG.cloudName || '',
+        uploadPreset: CLOUDINARY_CONFIG.uploadPreset || '',
+        uploadUrl: CLOUDINARY_CONFIG.cloudName ? getCloudinaryUploadUrl('image') : '/api/media/upload',
     };
 }
 
 /**
- * Upload file to Cloudinary
+ * Upload file - Automatically routes to Cloudflare R2, falling back to legacy Cloudinary if needed.
  * @param {File} file - File object to upload
- * @returns {Promise<object>} - Upload response with secure_url
+ * @returns {Promise<object>} - Upload response with url and secure_url
  */
 export async function uploadToCloudinary(file) {
     if (!file) {
         throw new Error('File is required');
     }
 
+    validateCloudinaryConfig();
+
     const mimeType = file.type || 'application/octet-stream';
     const isVideo = mimeType.startsWith('video/');
     const isImage = mimeType.startsWith('image/');
 
-    // Validate file size (10MB max for images, 50MB max for videos)
-    const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-    const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+    const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+    const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 
     if (isVideo && file.size > MAX_VIDEO_SIZE) {
         throw new Error('Video file is too large. Maximum size is 50MB.');
@@ -100,10 +100,12 @@ export async function uploadToCloudinary(file) {
             name: file.name,
             mimeType,
             size: file.size,
-            type: isImage ? 'image' : 'file',
+            type: isImage ? 'image' : isVideo ? 'video' : 'file',
             url: uploadData.secure_url,
-            publicId: uploadData.public_id, // Store for future deletion/manipulation
-            cloudinaryResponse: uploadData, // Store full response for reference
+            secure_url: uploadData.secure_url,
+            publicId: uploadData.public_id,
+            public_id: uploadData.public_id,
+            cloudinaryResponse: uploadData,
         };
     } catch (error) {
         console.error('Error uploading to Cloudinary:', error);
@@ -112,38 +114,37 @@ export async function uploadToCloudinary(file) {
 }
 
 /**
- * Validate Cloudinary URL
+ * Validate Media URL (Cloudinary or Cloudflare R2)
  * @param {string} url - URL to validate
- * @returns {boolean} - True if valid Cloudinary URL
+ * @returns {boolean}
  */
 export function isValidCloudinaryUrl(url) {
     if (!url || typeof url !== 'string') return false;
-    return url.includes('cloudinary.com') || url.includes('res.cloudinary.com');
+    return (
+        url.includes('cloudinary.com') ||
+        url.includes('res.cloudinary.com') ||
+        isValidR2Url(url)
+    );
 }
 
 // ==================== URL MASKING ====================
 
 const MASKED_BASE = '/media';
-// Regex that captures the cloud name from a Cloudinary URL
 const _CLD_RE = /https?:\/\/res\.cloudinary\.com\/([^/]+)\//g;
 
 /**
  * Masks a raw Cloudinary URL behind our own domain proxy.
- * The cloud name is preserved in the path so /media/ proxy can route to the correct account.
- * Input:  https://res.cloudinary.com/dkiagrvnp/image/upload/v1/abc.jpg
- * Output: /media/dkiagrvnp/image/upload/v1/abc.jpg
- *
- * Safe by default — non-Cloudinary URLs pass through unchanged.
+ * Cloudflare R2 and other URLs pass through unchanged.
  */
 export function maskCloudinaryUrl(url) {
     if (!url || typeof url !== 'string') return url;
+    if (isValidR2Url(url)) return url;
     if (!url.includes('res.cloudinary.com')) return url;
     return url.replace(_CLD_RE, (_match, cloudName) => `${MASKED_BASE}/${cloudName}/`);
 }
 
 /**
  * Recursively walks an object/array and masks all Cloudinary URLs found in string values.
- * Used to automatically mask all URLs in API responses.
  */
 export function maskAllCloudinaryUrls(obj) {
     if (obj === null || obj === undefined) return obj;

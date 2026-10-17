@@ -94,7 +94,7 @@ export default function PostAdPaymentPage() {
       if (response?.success) {
         if (walletToUse > 0) {
           try {
-            await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/wallets/debit`, {
+            await fetch("/api/proxy/wallets/debit", {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
