@@ -138,8 +138,12 @@ export default function MerchantLandingPage() {
 
               {/* Green top bar */}
               <div className="bg-gradient-to-r from-[#157a4f] to-[#1aaa6b] px-8 pt-8 pb-7 text-center">
-                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f3b12a] shadow-lg mb-4">
-                  <span className="text-white text-2xl font-black">A</span>
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f3b12a] shadow-lg mb-4 p-2.5">
+                  <img
+                    src="/images/ajubaju-icon-white.png"
+                    alt="AjuBaju Icon"
+                    className="h-8 w-auto object-contain"
+                  />
                 </div>
                 <h2 className="text-white text-xl font-extrabold leading-tight mb-1">
                   Join AjuBaju as a Merchant
@@ -233,14 +237,22 @@ export default function MerchantLandingPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/merchant"
-            className="flex h-11 items-center gap-1.5 rounded-full bg-[#f3b12a] px-4 shadow-sm transition hover:opacity-90"
+            className="flex h-11 items-center gap-2 rounded-full bg-[#f3b12a] px-4 shadow-sm transition hover:opacity-90"
           >
-            <span
-              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold leading-none text-[#f3b12a] bg-white"
-            >A</span>
-            <span className="text-[15px] font-extrabold tracking-wide text-white">
-              AjuBaju
-            </span>
+            <img
+              src="/images/ajubaju-icon-white.png"
+              alt="AjuBaju Icon"
+              className="h-[21px] w-auto shrink-0 object-contain"
+              loading="eager"
+              draggable={false}
+            />
+            <img
+              src="/images/ajubaju-text-white.png"
+              alt="AjuBaju"
+              className="h-[18px] w-auto shrink-0 object-contain"
+              loading="eager"
+              draggable={false}
+            />
           </Link>
         </div>
 
@@ -1280,9 +1292,18 @@ export default function MerchantLandingPage() {
       <footer className="bg-white border-t border-gray-100 py-16 px-6">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="space-y-4 md:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 px-3 items-center justify-center rounded-lg bg-[#f3b12a] text-white font-extrabold text-sm shadow-sm">
-                AjuBaju
+            <Link href="/" className="inline-flex items-center gap-2">
+              <div className="flex h-9 px-3.5 items-center justify-center gap-2 rounded-xl bg-[#f3b12a] shadow-sm">
+                <img
+                  src="/images/ajubaju-icon-white.png"
+                  alt="AjuBaju Icon"
+                  className="h-5 w-auto object-contain"
+                />
+                <img
+                  src="/images/ajubaju-text-white.png"
+                  alt="AjuBaju"
+                  className="h-4 w-auto object-contain"
+                />
               </div>
             </Link>
             <p className="text-xs text-gray-400 leading-relaxed max-w-xs">

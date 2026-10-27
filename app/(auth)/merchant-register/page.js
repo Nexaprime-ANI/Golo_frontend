@@ -377,10 +377,19 @@ export default function MerchantRegisterPage() {
       {/* ─── TOP HEADER ─── */}
       <header className="w-full bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0 z-10 sticky top-0 shadow-sm">
         {/* Left: Logo */}
-        <div className="flex items-center gap-3 border-r border-gray-200 pr-6">
-          <div className="w-8 h-8 bg-[#157A4F] rounded flex items-center justify-center font-bold text-white text-[16px]">A</div>
-          <span className="text-[16px] font-bold text-[#157A4F] tracking-tight">AjuBaju Merchant Registration</span>
-        </div>
+        <Link href="/" className="flex items-center gap-2.5 border-r border-gray-200 pr-6 transition-opacity hover:opacity-85">
+          <img
+            src="/images/ajubaju-icon.png"
+            alt="AjuBaju Icon"
+            className="h-[22px] w-auto shrink-0 object-contain"
+          />
+          <img
+            src="/images/ajubaju-text.png"
+            alt="AjuBaju"
+            className="h-[18px] w-auto shrink-0 object-contain"
+          />
+          <span className="hidden sm:inline-block text-[12px] font-semibold text-gray-400 pl-1 border-l border-gray-200">Merchant Registration</span>
+        </Link>
 
         {/* Center: Stepper */}
         <div className="hidden lg:flex items-center gap-4 flex-1 justify-center max-w-2xl">

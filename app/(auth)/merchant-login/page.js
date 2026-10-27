@@ -191,8 +191,12 @@ export default function MerchantLoginPage() {
 
               {/* Green top bar */}
               <div className="bg-gradient-to-r from-[#157a4f] to-[#1aaa6b] px-8 pt-8 pb-7 text-center">
-                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f3b12a] shadow-lg mb-4">
-                  <span className="text-white text-2xl font-black">A</span>
+                <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#f3b12a] shadow-lg mb-4 p-2.5">
+                  <img
+                    src="/images/ajubaju-icon-white.png"
+                    alt="AjuBaju Icon"
+                    className="h-8 w-auto object-contain"
+                  />
                 </div>
                 <h2 className="text-white text-xl font-extrabold leading-tight mb-1">
                   Join AjuBaju as a Merchant
@@ -298,15 +302,20 @@ export default function MerchantLoginPage() {
               className="rounded-[28px] bg-white shadow-sm flex flex-col items-center p-8 relative mx-auto w-full max-w-[380px]"
             >
               {/* AjuBaju Logo (Floating outside top-left) */}
-              <div className="absolute top-[-30px] left-0 flex items-center gap-2">
-                <div className="w-8 h-8 bg-[#157A4F] rounded-md flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 9l10 13 10-13L12 2z" fill="#FFF" fillOpacity="0.85" stroke="#FFF" strokeWidth="1.5"/>
-                    <path d="M12 2L2 9h20L12 2z" fill="#FFF" fillOpacity="1"/>
-                  </svg>
-                </div>
-                <span className="text-[18px] font-bold text-gray-800 tracking-wide">AjuBaju</span>
-              </div>
+              <Link href="/" className="absolute top-[-34px] left-0 flex items-center gap-2 transition-opacity hover:opacity-85">
+                <img
+                  src="/images/ajubaju-icon.png"
+                  alt="AjuBaju Icon"
+                  className="h-[23px] w-auto shrink-0 object-contain"
+                  loading="eager"
+                />
+                <img
+                  src="/images/ajubaju-text.png"
+                  alt="AjuBaju"
+                  className="h-[19px] w-auto shrink-0 object-contain"
+                  loading="eager"
+                />
+              </Link>
 
               {/* Merchant Illustration */}
               <div className="relative flex items-center justify-center w-full bg-[#E5EEF5] rounded-2xl overflow-hidden" style={{ height: 280 }}>
@@ -437,6 +446,22 @@ export default function MerchantLoginPage() {
         {/* ─── RIGHT PANEL ─── */}
         <div className="flex flex-1 items-center justify-center bg-white px-6 py-10">
           <div className="w-full max-w-[420px]">
+            {/* Mobile Brand Logo */}
+            <div className="lg:hidden flex items-center justify-center mb-6">
+              <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-85">
+                <img
+                  src="/images/ajubaju-icon.png"
+                  alt="AjuBaju Icon"
+                  className="h-6 w-auto shrink-0 object-contain"
+                />
+                <img
+                  src="/images/ajubaju-text.png"
+                  alt="AjuBaju"
+                  className="h-5 w-auto shrink-0 object-contain"
+                />
+              </Link>
+            </div>
+
             {/* Title */}
             <h1 className="text-[26px] font-extrabold text-gray-900 text-center mb-1">
               Merchant Portal Login

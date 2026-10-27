@@ -2027,9 +2027,115 @@ export async function logProductView(productId) {
     }
 }
 
-// ==================== UNIFIED SEARCH ====================
-export async function unifiedSearch(query, { type = 'all', page = 1, limit = 15 } = {}) {
-    return apiClient(`/search/unified?q=${encodeURIComponent(query)}&type=${type}&page=${page}&limit=${limit}`);
+// ==================== UNIFIED SEARCH & SEARCH HISTORY ====================
+export function getSearchSessionId() {
+    if (typeof window === 'undefined') return '';
+    try {
+        let sid = localStorage.getItem('ajubaju_search_session_id');
+        if (!sid) {
+            sid = 'sess_' + Math.random().toString(36).slice(2, 11) + '_' + Date.now().toString(36);
+            localStorage.setItem('ajubaju_search_session_id', sid);
+        }
+        return sid;
+    } catch (_e) {
+        return '';
+    }
+}
+
+export async function unifiedSearch(query, { type = 'all', page = 1, limit = 15, location = '', strict = false } = {}) {
+    const sessionId = getSearchSessionId();
+    const locParam = location ? `&location=${encodeURIComponent(location)}` : '';
+    const sessParam = sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : '';
+    const strictParam = strict ? '&strict=true' : '';
+    return apiClient(`/search/unified?q=${encodeURIComponent(query)}&type=${type}&page=${page}&limit=${limit}${locParam}${sessParam}${strictParam}`);
+}
+
+export async function getSearchHistory({ limit = 6 } = {}) {
+    const sessionId = getSearchSessionId();
+    try {
+        const res = await apiClient(`/search/history?limit=${limit}&sessionId=${encodeURIComponent(sessionId)}`);
+        return res?.data || [];
+    } catch (e) {
+        console.warn('Failed to get search history:', e);
+        return [];
+    }
+}
+
+export async function saveSearchHistory({ query, location = '' } = {}) {
+    if (!query || !query.trim()) return null;
+    const sessionId = getSearchSessionId();
+    try {
+        return await apiClient('/search/history', {
+            method: 'POST',
+            body: JSON.stringify({
+                query: query.trim(),
+                location: (location || '').trim(),
+                sessionId,
+            }),
+        });
+    } catch (e) {
+        console.warn('Failed to save search history:', e);
+        return null;
+    }
+}
+
+export async function createItemDemandRequest({ keyword, originalQuery, userContact, userName, location, notes } = {}) {
+    const sessionId = getSearchSessionId();
+    try {
+        return await apiClient('/search/item-demand-request', {
+            method: 'POST',
+            body: JSON.stringify({
+                keyword,
+                originalQuery,
+                userContact,
+                userName,
+                location,
+                notes,
+                sessionId,
+            }),
+        });
+    } catch (e) {
+        console.warn('Failed to submit item request:', e);
+        return { success: false, message: e.message };
+    }
+}
+
+export async function getZeroResultAnalytics() {
+    try {
+        const res = await apiClient('/search/analytics/zero-result-rate');
+        return res?.data || null;
+    } catch (e) {
+        console.warn('Failed to get zero result analytics:', e);
+        return null;
+    }
+}
+
+export async function deleteSearchHistoryItem({ id, query } = {}) {
+    const sessionId = getSearchSessionId();
+    const params = new URLSearchParams();
+    if (sessionId) params.set('sessionId', sessionId);
+    if (id) params.set('id', id);
+    if (query) params.set('query', query);
+    try {
+        return await apiClient(`/search/history?${params.toString()}`, {
+            method: 'DELETE',
+        });
+    } catch (e) {
+        console.warn('Failed to delete search history item:', e);
+        return { success: false };
+    }
+}
+
+export async function clearSearchHistory() {
+    const sessionId = getSearchSessionId();
+    try {
+        return await apiClient(`/search/history?sessionId=${encodeURIComponent(sessionId)}`, {
+            method: 'DELETE',
+        });
+    } catch (e) {
+        console.warn('Failed to clear search history:', e);
+        return { success: false };
+    }
 }
 
 // ==================== ACCOUNT DELETION ====================

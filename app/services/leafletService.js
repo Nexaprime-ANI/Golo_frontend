@@ -206,6 +206,9 @@ export async function reverseGeocode(lng, lat) {
     return null;
   }
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
   try {
     const params = new URLSearchParams({
       format: "json",
@@ -240,11 +243,50 @@ export async function reverseGeocode(lng, lat) {
 
     return null;
   } catch (error) {
+    clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
       console.warn("⏱️ Reverse geocoding timeout");
     }
     return null;
   }
+}
+
+/**
+ * Fallback to IP-based location if GPS is unavailable or blocked
+ * @returns {Promise<object|null>}
+ */
+export async function getIpLocation() {
+  try {
+    const res = await fetch("http://ip-api.com/json/", { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.city) {
+        return {
+          city: data.city,
+          label: data.regionName ? `${data.city}, ${data.regionName}` : data.city,
+          displayName: `${data.city}, ${data.regionName || ''}, ${data.country || 'India'}`,
+          coordinates: { lat: data.lat, lng: data.lon },
+        };
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const res2 = await fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(4000) });
+    if (res2.ok) {
+      const data2 = await res2.json();
+      if (data2 && data2.city) {
+        return {
+          city: data2.city,
+          label: data2.region ? `${data2.city}, ${data2.region}` : data2.city,
+          displayName: `${data2.city}, ${data2.region || ''}, ${data2.country_name || 'India'}`,
+          coordinates: { lat: data2.latitude, lng: data2.longitude },
+        };
+      }
+    }
+  } catch (e) {}
+
+  return null;
 }
 
 /**
@@ -281,11 +323,27 @@ function formatSearchResults(results) {
  */
 function formatLocationDetails(data) {
   const address = data.address || {};
+  const city =
+    address.city ||
+    address.town ||
+    address.village ||
+    address.county ||
+    address.state_district ||
+    "";
+  const area =
+    address.suburb ||
+    address.residential ||
+    address.neighbourhood ||
+    address.road ||
+    data.name ||
+    "";
   return {
     id: data.osm_id,
-    name: data.name || address.house_number || "",
+    name: area || data.name || address.house_number || city || "",
     displayName: data.display_name,
-    city: address.city || address.town || address.village || address.county || "",
+    city: city,
+    area: area,
+    addressDetails: address,
     coordinates: {
       lat: parseFloat(data.lat),
       lng: parseFloat(data.lon),

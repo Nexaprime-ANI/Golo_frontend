@@ -89,15 +89,22 @@ export default function MerchantNavbar({ activeKey = "dashboard" }) {
       <div className="flex min-w-0 items-center gap-2 lg:min-w-[180px] lg:gap-3">
         <Link
           href="/merchant/dashboard"
-          className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 shadow-sm transition hover:opacity-90"
+          className="flex h-11 items-center gap-2 rounded-full bg-white px-3.5 shadow-sm transition hover:opacity-90"
         >
-          <span
-            className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold leading-none text-white"
-            style={{ background: "#157A4F" }}
-          >A</span>
-          <span className="text-[15px] font-extrabold tracking-wide text-[#157A4F]">
-            AjuBaju
-          </span>
+          <img
+            src="/images/ajubaju-icon.png"
+            alt="AjuBaju Icon"
+            className="h-[21px] w-auto shrink-0 object-contain"
+            loading="eager"
+            draggable={false}
+          />
+          <img
+            src="/images/ajubaju-text.png"
+            alt="AjuBaju"
+            className="h-[18px] w-auto shrink-0 object-contain"
+            loading="eager"
+            draggable={false}
+          />
         </Link>
       </div>
 

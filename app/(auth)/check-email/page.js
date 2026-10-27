@@ -185,7 +185,13 @@ function CheckEmailContent() {
         </div>
 
         <div className={`check-email-card ${styles.card}`}>
-          <div className="top-g-box">A</div>
+          <div className="top-g-box">
+            <img
+              src="/images/ajubaju-icon-white.png"
+              alt="AjuBaju Icon"
+              className="w-10 h-10 object-contain"
+            />
+          </div>
 
           <Link href={accountType === "merchant" ? "/merchant-login" : "/login"} className={styles.backLink}>
             <ArrowLeft size={17} />

@@ -10,6 +10,7 @@ import CategoryBar from "../components/CategoryBar";
 import Footer from "../components/Footer";
 import AuthRequiredModal from "../components/AuthRequiredModal";
 import { MerchantSearchCard, ProductSearchCard } from "../components/SearchCards";
+import SearchEmptyState from "../components/SearchEmptyState";
 import { getNearbyOffers, searchMerchants, searchProducts, unifiedSearch } from "../lib/api/ads";;
 
 function OfferCardMedia({ imageUrl, videoUrl, title }) {
@@ -72,6 +73,13 @@ const OFFER_TYPES = [
   "Clear Stock Sale",
   "Free Gift Offer",
 ];
+
+const DEFAULT_OFFER_TYPES = Object.freeze(
+  OFFER_TYPES.reduce((acc, type) => {
+    acc[type] = false;
+    return acc;
+  }, {})
+);
 
 const SORT_OPTIONS = [
   { value: "nearest", label: "Nearest" },
@@ -421,26 +429,7 @@ function NearbyDealsPageContent() {
   const [activeNowOnly, setActiveNowOnly] = useState(false);
   const [sortBy, setSortBy] = useState("nearest");
   const [selectedOfferTypes, setSelectedOfferTypes] = useState({
-    Special: false,
-    Festival: false,
-    "Limited Time": false,
-    Combo: false,
-    Clearance: false,
-    "Flash Sale": false,
-    "Buy One Get One (BOGO)": false,
-    "Flat Discount": false,
-    "Percentage Off": false,
-    "Bundle Deal": false,
-    "New Arrival Offer": false,
-    "Seasonal Offer": false,
-    "Weekend Offer": false,
-    "Happy Hour Deal": false,
-    "Member Exclusive": false,
-    "First Purchase Offer": false,
-    "Loyalty Reward": false,
-    "Referral Offer": false,
-    "Clear Stock Sale": false,
-    "Free Gift Offer": false,
+    ...DEFAULT_OFFER_TYPES,
   });
   const [rawOffers, setRawOffers] = useState([]);
   const [displayLimit, setDisplayLimit] = useState(16);
@@ -453,6 +442,8 @@ function NearbyDealsPageContent() {
   const [hasMoreProducts, setHasMoreProducts] = useState(true);
   const [hasMoreOffers, setHasMoreOffers] = useState(true);
   const [loadingOffers, setLoadingOffers] = useState(false);
+  const [searchMeta, setSearchMeta] = useState(null);
+  const [isStrictMode, setIsStrictMode] = useState(false);
   const [error, setError] = useState("");
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [authRedirectTo, setAuthRedirectTo] = useState("/nearby-deals");
@@ -527,6 +518,10 @@ function NearbyDealsPageContent() {
       setRawOffers([]);
     }
   }, [location]);
+
+  useEffect(() => {
+    setIsStrictMode(false);
+  }, [query]);
 
   // 1) Initialize from global storage first to prevent "0 offers" blink
   useEffect(() => {
@@ -714,7 +709,8 @@ function NearbyDealsPageContent() {
           setMerchantPage(1);
           setProductPage(1);
           setOfferPage(1);
-          const res = await unifiedSearch(query, { type: 'all', limit: 16, page: 1 });
+          const res = await unifiedSearch(query, { type: 'all', limit: 16, page: 1, strict: isStrictMode });
+          setSearchMeta(res?.meta || null);
           
           const unifiedMerchants = res?.data?.merchants || [];
           const unifiedProducts = res?.data?.products || [];
@@ -744,6 +740,7 @@ function NearbyDealsPageContent() {
           }
         }
       } else {
+        setSearchMeta(null);
         setMerchantResults([]);
         setProductResults([]);
         setHasMoreMerchants(false);
@@ -765,6 +762,7 @@ function NearbyDealsPageContent() {
     priceRange,
     location,
     query,
+    isStrictMode,
     selectedCategory,
     sortBy,
     manualLatitude,
@@ -873,6 +871,11 @@ function NearbyDealsPageContent() {
     return { total, active, avgPrice };
   }, [filteredDeals]);
 
+  const hasAnySearchResults =
+    filteredDeals.length > 0 ||
+    merchantResults.length > 0 ||
+    productResults.length > 0;
+
   // ── Infinite scroll ─────────────────────────────────────────────────────────
   // loadMoreOffers increments displayLimit by 16 each time the sentinel enters
   // the viewport. Stable reference via useCallback so the observer effect only
@@ -907,34 +910,16 @@ function NearbyDealsPageContent() {
   // "Rendered more hooks than during the previous render" error.
 
   const clearAllFilters = () => {
+    setIsStrictMode(false);
     setDistanceRadius(50);
     setPriceRange(5000);
     setTopDiscountOnly(false);
-    setActiveNowOnly(true);
+    setActiveNowOnly(false);
     setSortBy("nearest");
-    setSelectedOfferTypes({
-      Special: false,
-      Festival: false,
-      "Limited Time": false,
-      Combo: false,
-      Clearance: false,
-      "Flash Sale": false,
-      "Buy One Get One (BOGO)": false,
-      "Flat Discount": false,
-      "Percentage Off": false,
-      "Bundle Deal": false,
-      "New Arrival Offer": false,
-      "Seasonal Offer": false,
-      "Weekend Offer": false,
-      "Happy Hour Deal": false,
-      "Member Exclusive": false,
-      "First Purchase Offer": false,
-      "Loyalty Reward": false,
-      "Referral Offer": false,
-      "Clear Stock Sale": false,
-      "Free Gift Offer": false,
-    });
+    setSelectedOfferTypes({ ...DEFAULT_OFFER_TYPES });
+    router.push('/nearby-deals');
   };
+  const handleClearAllFilters = clearAllFilters;
 
   const openDealDetails = (deal) => {
     const targetUrl = `/nearby-deals/deal?offerId=${deal.offerId}`;
@@ -949,6 +934,16 @@ function NearbyDealsPageContent() {
     }
 
     router.push(targetUrl);
+  };
+
+  const handleSelectQuery = (newQuery) => {
+    setIsStrictMode(false);
+    router.push(`/nearby-deals?q=${encodeURIComponent(newQuery)}`);
+  };
+
+  const handleSelectCategory = (categoryName) => {
+    setIsStrictMode(false);
+    router.push(`/nearby-deals?category=${encodeURIComponent(categoryName)}`);
   };
 
   if (loading) {
@@ -1000,7 +995,7 @@ function NearbyDealsPageContent() {
                 type="range"
                 min="1"
                 max="50"
-                value={distanceRadius}
+                value={typeof distanceRadius === "number" ? distanceRadius : 50}
                 onChange={(e) => setDistanceRadius(Number(e.target.value))}
                 className="w-full accent-[#157A4F]"
               />
@@ -1024,7 +1019,7 @@ function NearbyDealsPageContent() {
                     <input
                       type="checkbox"
                       className="h-3.5 w-3.5 shrink-0 rounded border-gray-300"
-                      checked={selectedOfferTypes[item]}
+                      checked={Boolean(selectedOfferTypes[item])}
                       onChange={(e) =>
                         setSelectedOfferTypes((prev) => ({
                           ...prev,
@@ -1049,7 +1044,7 @@ function NearbyDealsPageContent() {
                 min="100"
                 max="5000"
                 step="100"
-                value={priceRange}
+                value={typeof priceRange === "number" ? priceRange : 5000}
                 onChange={(e) => setPriceRange(Number(e.target.value))}
                 className="w-full accent-[#157A4F]"
               />
@@ -1183,29 +1178,129 @@ function NearbyDealsPageContent() {
               <p className="mb-3 text-[12px] text-red-600">{error}</p>
             ) : null}
 
-            {query && !loadingOffers && (
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Offers matching "{query}"</h2>
-            )}
-            <div
-              className={
-                activeView === "list"
-                  ? "space-y-4"
-                  : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
-              }
-            >
-              {loadingOffers ? (
-                <NearbyDealsSkeleton view={activeView} />
-              ) : filteredDeals.length === 0 ? (
-                <div className="col-span-full rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
-                  {query ? (
-                    <>No deals found matching "{query}".</>
-                  ) : location ? (
-                    <>No deals found for "{location}".</>
-                  ) : (
-                    <>No offers found for the selected filters.</>
-                  )}
+            {/* ── PARTIAL MATCH BANNER ── */}
+            {query && searchMeta?.isPartialMatch && (
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-3.5 text-sm text-amber-900 shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-200 text-amber-800 text-xs font-bold">i</span>
+                  <span>
+                    Showing results for <strong>&ldquo;{searchMeta.matchedQuery}&rdquo;</strong>
+                  </span>
                 </div>
-              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsStrictMode(true)}
+                  className="text-xs font-bold text-[#157A4F] hover:text-[#126642] underline transition cursor-pointer"
+                >
+                  Search only for &ldquo;{searchMeta.originalQuery}&rdquo;
+                </button>
+              </div>
+            )}
+
+            {/* ── TOTAL ZERO RESULTS WITH QUERY: SHOW EMPTY STATE & RELATED RECOMMENDATIONS ── */}
+            {query && !loadingOffers && !hasAnySearchResults ? (
+              <div className="space-y-8">
+                {searchMeta?.relatedItems &&
+                ((searchMeta.relatedItems.offers?.length > 0) ||
+                  (searchMeta.relatedItems.products?.length > 0)) ? (
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-6">
+                    <p className="text-sm font-semibold text-emerald-900 mb-6">
+                      Couldn&rsquo;t find exact matches for <strong>&ldquo;{query}&rdquo;</strong>, but you might like these popular items in <strong>{searchMeta.relatedItems.category}</strong>:
+                    </p>
+
+                    {searchMeta.relatedItems.offers?.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-base font-bold text-gray-900 mb-3">Popular Offers in {searchMeta.relatedItems.category}</h3>
+                        <div className={activeView === "list" ? "space-y-4" : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"}>
+                          {searchMeta.relatedItems.offers.map((deal, idx) => {
+                            const norm = normalizeNearbyOffer(deal);
+                            return (
+                              <article
+                                key={`rel-deal-${norm.offerId || idx}`}
+                                className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
+                              >
+                                <div className="relative h-40 w-full overflow-hidden bg-gray-100">
+                                  <OfferCardMedia imageUrl={norm.imageUrl} videoUrl={norm.videoUrl} title={norm.title} />
+                                  <span className="absolute left-3 top-3 rounded-full bg-[#157A4F] px-2.5 py-0.5 text-[10px] font-bold text-white">
+                                    {norm.category || "Offer"}
+                                  </span>
+                                </div>
+                                <div className="p-3.5 flex flex-col flex-1">
+                                  <h4 className="text-sm font-bold text-gray-900 line-clamp-2 mb-1">{norm.title}</h4>
+                                  <p className="text-xs text-gray-500 mb-3">{norm.merchant?.name || "Local Store"}</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenDeal(norm)}
+                                    className="mt-auto w-full rounded-xl bg-[#157A4F] py-1.5 text-xs font-bold text-white hover:bg-[#126642] transition"
+                                  >
+                                    View Deal
+                                  </button>
+                                </div>
+                              </article>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {searchMeta.relatedItems.products?.length > 0 && (
+                      <div className="mb-2">
+                        <h3 className="text-base font-bold text-gray-900 mb-3">Related Products in {searchMeta.relatedItems.category}</h3>
+                        <div className={activeView === "list" ? "space-y-4" : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"}>
+                          {searchMeta.relatedItems.products.map((p, idx) => (
+                            <ProductSearchCard key={`rel-prod-${p._id || idx}`} product={p} view={activeView} />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* High-Converting Demand Capture Empty State */}
+                <SearchEmptyState
+                  query={query}
+                  location={location}
+                  onClearFilters={handleClearAllFilters}
+                  onSelectQuery={handleSelectQuery}
+                  onSelectCategory={handleSelectCategory}
+                />
+              </div>
+            ) : (
+              <>
+                {query && !loadingOffers && (
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">Offers matching "{query}"</h2>
+                )}
+                <div
+                  className={
+                    activeView === "list"
+                      ? "space-y-4"
+                      : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                  }
+                >
+                  {loadingOffers ? (
+                    <NearbyDealsSkeleton view={activeView} />
+                  ) : filteredDeals.length === 0 ? (
+                    <div className="col-span-full rounded-xl border border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+                      {query ? (
+                        <>No offers found matching "{query}" (check stores and products below).</>
+                      ) : location ? (
+                        <>No deals found for "{location}".</>
+                      ) : (
+                        <>
+                          <span>No offers found for the selected filters.</span>
+                          <div className="mt-2">
+                            <button
+                              type="button"
+                              onClick={handleClearAllFilters}
+                              className="text-xs font-semibold text-[#157A4F] underline cursor-pointer"
+                            >
+                              Reset filters
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
                 filteredDeals.slice(0, displayLimit).map((deal, index) => {
                   const uniqueKey = `${deal.offerId || deal._id || deal.requestId || index}-${index}`;
                   return activeView === "list" ? (
@@ -1472,6 +1567,8 @@ function NearbyDealsPageContent() {
                 )}
               </div>
             )}
+            </>
+          )}
           </div>
         </div>
       </section>

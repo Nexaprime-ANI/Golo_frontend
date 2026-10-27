@@ -20,13 +20,20 @@ import {
   MessageSquare,
   MoreVertical,
   Crosshair,
+  Clock,
 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import AuthRequiredModal from "./AuthRequiredModal";
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from "../lib/api/user";;
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from "../lib/api/user";
+import {
+  getSearchHistory,
+  saveSearchHistory,
+  deleteSearchHistoryItem,
+  clearSearchHistory,
+} from "../lib/api";
 import { normalizeAppPath } from "../lib/path";
-import { reverseGeocode, searchLocations } from "../services/leafletService";
+import { reverseGeocode, searchLocations, getIpLocation } from "../services/leafletService";
 
 const CURRENT_LOCATION_STORAGE_KEY = "golo_current_location";
 const MIC_PERMISSION_STORAGE_KEY = "golo_voice_mic_permission";
@@ -34,6 +41,20 @@ const MIC_PERMISSION_STORAGE_KEY = "golo_voice_mic_permission";
 let globalManualLocation = null;
 
 function getShortLocationLabel(locationDetails) {
+  if (!locationDetails) return "";
+
+  if (locationDetails.label && locationDetails.label !== "Current Location") {
+    return locationDetails.label;
+  }
+
+  const area = locationDetails.area?.trim();
+  const city = locationDetails.city?.trim();
+  if (area && city && area.toLowerCase() !== city.toLowerCase()) {
+    return `${area}, ${city}`;
+  }
+  if (city) return city;
+  if (area) return area;
+
   const rawAddress = String(
     locationDetails?.address ||
       locationDetails?.displayName ||
@@ -45,17 +66,18 @@ function getShortLocationLabel(locationDetails) {
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean)
-    .filter((part) => !/^\d{4,}$/.test(part));
-
-  if (parts.length >= 3) {
-    return parts.slice(0, 3).join(", ");
-  }
+    .filter((part) => !/^\d{4,}$/.test(part))
+    .filter((part) => part.toLowerCase() !== "india");
 
   if (parts.length >= 2) {
-    return parts.slice(0, 2).join(", ");
+    return `${parts[0]}, ${parts[1]}`;
   }
 
-  return parts[0] || "Current Location";
+  if (parts.length === 1 && parts[0] !== "Current Location") {
+    return parts[0];
+  }
+
+  return "";
 }
 
 function normalizeVoiceTranscript(value = "") {
@@ -137,7 +159,7 @@ function NavbarContent({
   // Read location from localStorage on mount to prevent flickering
   useEffect(() => {
     if (typeof window === "undefined" || urlLocation) return;
-    
+
     if (globalManualLocation) {
       hasManualLocationRef.current = true;
       hasCurrentLocationAccessRef.current = false;
@@ -149,8 +171,20 @@ function NavbarContent({
       const stored = localStorage.getItem(CURRENT_LOCATION_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.label && !hasManualLocationRef.current) {
+        if (
+          parsed &&
+          parsed.label &&
+          parsed.label !== "Current Location" &&
+          !hasManualLocationRef.current
+        ) {
           setLocation(parsed.label);
+          setCurrentLocationLabel(parsed.label);
+          if (parsed.coordinates) {
+            setCurrentLocationCoordinates(parsed.coordinates);
+          }
+          return;
+        } else if (parsed && parsed.label === "Current Location") {
+          localStorage.removeItem(CURRENT_LOCATION_STORAGE_KEY);
         }
       }
     } catch (e) {}
@@ -167,6 +201,7 @@ function NavbarContent({
 
     if (
       currentLocationLabel &&
+      currentLocationLabel !== "Current Location" &&
       hasCurrentLocationAccessRef.current &&
       !hasManualLocationRef.current
     ) {
@@ -177,22 +212,80 @@ function NavbarContent({
   const detectLiveLocation = useCallback((forceUpdate = false) => {
     if (typeof window === "undefined") return () => {};
 
-    if (!navigator?.geolocation) {
-      localStorage.removeItem(CURRENT_LOCATION_STORAGE_KEY);
-      if (!hasManualLocationRef.current || forceUpdate) {
-        setCurrentLocationLabel("");
-        setCurrentLocationCoordinates(null);
-        setLocation("");
-      }
-      return () => {};
-    }
-
     if (forceUpdate) {
       setLocation("Detecting location...");
       setLocationLoading(true);
     }
 
     let cancelled = false;
+
+    const applyResolvedLocation = (locationObj, coords) => {
+      if (cancelled || !locationObj) return;
+      const label =
+        getShortLocationLabel(locationObj) ||
+        locationObj.city ||
+        locationObj.name ||
+        "";
+      if (!label || label === "Current Location") return;
+
+      hasCurrentLocationAccessRef.current = true;
+      setCurrentLocationLabel(label);
+      const finalCoords = coords || locationObj.coordinates;
+      if (finalCoords) setCurrentLocationCoordinates(finalCoords);
+
+      setLocation((prev) => {
+        if (hasManualLocationRef.current) return prev;
+        if (!forceUpdate && urlLocation) return prev;
+        return label;
+      });
+
+      if (forceUpdate || !hasManualLocationRef.current) {
+        localStorage.setItem(
+          CURRENT_LOCATION_STORAGE_KEY,
+          JSON.stringify({
+            label,
+            fullLocation:
+              locationObj.displayName || locationObj.address || label,
+            city: locationObj.city || "",
+            coordinates: finalCoords,
+            updatedAt: Date.now(),
+          }),
+        );
+        window.dispatchEvent(new Event("locationUpdated"));
+      }
+
+      if (forceUpdate) {
+        setLocationLoading(false);
+        if (!hasManualLocationRef.current) {
+          runSearch(searchQuery, label, finalCoords);
+        }
+      }
+    };
+
+    const fallbackToIp = async () => {
+      try {
+        const ipLocation = await getIpLocation();
+        if (cancelled) return;
+        if (ipLocation && (ipLocation.city || ipLocation.label)) {
+          applyResolvedLocation(ipLocation, ipLocation.coordinates);
+          return;
+        }
+      } catch (e) {}
+
+      if (cancelled) return;
+      if (forceUpdate) {
+        setLocationLoading(false);
+        setLocation((prev) => (prev === "Detecting location..." ? "" : prev));
+      }
+    };
+
+    if (!navigator?.geolocation) {
+      fallbackToIp();
+      return () => {
+        cancelled = true;
+      };
+    }
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         if (cancelled) return;
@@ -202,9 +295,6 @@ function NavbarContent({
           lng: position.coords.longitude,
         };
 
-        hasCurrentLocationAccessRef.current = true;
-        setCurrentLocationCoordinates(coordinates);
-
         try {
           const locationDetails = await reverseGeocode(
             coordinates.lng,
@@ -212,61 +302,18 @@ function NavbarContent({
           );
           if (cancelled) return;
 
-          const label = getShortLocationLabel(locationDetails);
-          setCurrentLocationLabel(label);
-          setLocation((prev) => {
-            if (hasManualLocationRef.current) return prev;
-            if (!forceUpdate && urlLocation) return prev;
-            return label;
-          });
-
-          if (forceUpdate || !hasManualLocationRef.current) {
-            localStorage.setItem(
-              CURRENT_LOCATION_STORAGE_KEY,
-              JSON.stringify({ 
-                label, 
-                fullLocation: locationDetails?.displayName || locationDetails?.address || label,
-                city: locationDetails?.city || "",
-                coordinates, 
-                updatedAt: Date.now() 
-              }),
-            );
-            window.dispatchEvent(new Event('locationUpdated'));
-          }
-
-          if (forceUpdate) {
-            setLocationLoading(false);
-            if (!hasManualLocationRef.current) {
-              runSearch(searchQuery, label, coordinates);
-            }
+          if (locationDetails) {
+            applyResolvedLocation(locationDetails, coordinates);
+          } else {
+            await fallbackToIp();
           }
         } catch {
-          const fallbackLabel = "Current Location";
-          if (cancelled) return;
-          hasCurrentLocationAccessRef.current = true;
-          setCurrentLocationLabel(fallbackLabel);
-          setLocation((prev) =>
-            hasManualLocationRef.current ? prev : fallbackLabel,
-          );
-          if (forceUpdate) {
-            setLocationLoading(false);
-            if (!hasManualLocationRef.current) {
-              runSearch(searchQuery, fallbackLabel, coordinates);
-            }
-          }
+          await fallbackToIp();
         }
       },
-      () => {
-        hasCurrentLocationAccessRef.current = false;
-        setCurrentLocationLabel("");
-        setCurrentLocationCoordinates(null);
-        localStorage.removeItem(CURRENT_LOCATION_STORAGE_KEY);
-        if (!hasManualLocationRef.current) {
-          if (forceUpdate || !urlLocation) {
-            setLocation("");
-          }
-        }
-        if (forceUpdate) setLocationLoading(false);
+      async (error) => {
+        console.warn("⚠️ Geolocation unavailable/denied:", error?.message);
+        await fallbackToIp();
       },
       {
         enableHighAccuracy: true,
@@ -312,9 +359,13 @@ function NavbarContent({
   const [voiceTranscript, setVoiceTranscript] = useState("");
   const [voiceError, setVoiceError] = useState("");
   const [isListening, setIsListening] = useState(false);
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [showSearchHistory, setShowSearchHistory] = useState(false);
 
   const dropdownRef = useRef(null);
   const mobileDropdownRef = useRef(null);
+  const searchContainerRef = useRef(null);
+  const mobileSearchContainerRef = useRef(null);
   const profileRef = useRef(null);
   const notifRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -341,6 +392,8 @@ function NavbarContent({
     pathname.startsWith("/choja") ||
     /^\/profile\/[a-f0-9]{24}$/i.test(pathname) ||
     pathname.startsWith("/profile/transactions");
+  const isChojaActive = Boolean(isChojaSurface);
+  const isAjubajuActive = !isChojaActive;
   const isMerchantSurface = isAuthenticated && user?.accountType === "merchant";
   const useGolocalHomeNav = isGolocalSurface;
   const homeNavHref = "/choja";
@@ -440,6 +493,51 @@ function NavbarContent({
     };
   }, []);
 
+  const fetchSearchHistory = useCallback(async () => {
+    try {
+      const items = await getSearchHistory({ limit: 6 });
+      if (Array.isArray(items)) {
+        setSearchHistory(items.slice(0, 6));
+      }
+    } catch (_err) {
+      // Ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSearchHistory();
+  }, [fetchSearchHistory]);
+
+  const handleDeleteHistory = async (e, item) => {
+    e.stopPropagation();
+    setSearchHistory((prev) =>
+      prev.filter((h) => (item.id ? h.id !== item.id : h.query !== item.query))
+    );
+    try {
+      await deleteSearchHistoryItem({ id: item.id, query: item.query });
+    } catch (_e) {
+      // Ignore
+    }
+  };
+
+  const handleClearAllHistory = async (e) => {
+    e.stopPropagation();
+    setSearchHistory([]);
+    try {
+      await clearSearchHistory();
+    } catch (_e) {
+      // Ignore
+    }
+  };
+
+  const handleSelectHistoryItem = (item) => {
+    const selectedQuery = item.query;
+    const selectedLocation = item.location || location;
+    handleSearchChange(selectedQuery);
+    setShowSearchHistory(false);
+    runSearch(selectedQuery, selectedLocation);
+  };
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (
@@ -448,6 +546,14 @@ function NavbarContent({
         !mobileDropdownRef.current?.contains(event.target)
       ) {
         setShowSuggestions(false);
+      }
+
+      if (
+        (searchContainerRef.current || mobileSearchContainerRef.current) &&
+        !searchContainerRef.current?.contains(event.target) &&
+        !mobileSearchContainerRef.current?.contains(event.target)
+      ) {
+        setShowSearchHistory(false);
       }
 
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -566,8 +672,33 @@ function NavbarContent({
     nextLocation = location,
     nextCoordinates = null,
   ) => {
+    setShowSearchHistory(false);
     const trimmedSearch = nextSearch.trim();
     const trimmedLocation = nextLocation.trim();
+
+    if (trimmedSearch) {
+      saveSearchHistory({ query: trimmedSearch, location: trimmedLocation })
+        .then((res) => {
+          if (res?.data) {
+            fetchSearchHistory();
+          }
+        })
+        .catch(() => {});
+      setSearchHistory((prev) => {
+        const filtered = prev.filter(
+          (h) => h.query.toLowerCase() !== trimmedSearch.toLowerCase()
+        );
+        return [
+          {
+            query: trimmedSearch,
+            location: trimmedLocation,
+            searchedAt: new Date().toISOString(),
+          },
+          ...filtered,
+        ].slice(0, 6);
+      });
+    }
+
     const resolvedCoordinates =
       nextCoordinates ||
       (!trimmedLocation || trimmedLocation === currentLocationLabel
@@ -1069,6 +1200,77 @@ function NavbarContent({
     if (callback) callback(event);
   };
 
+  const renderSearchHistoryDropdown = (isMobile = false) => {
+    if (!showSearchHistory) return null;
+
+    return (
+      <div
+        className={`absolute left-0 right-0 ${
+          isMobile ? "top-[calc(100%+6px)]" : "top-[calc(100%+8px)]"
+        } z-50 overflow-hidden rounded-2xl border border-gray-100 bg-white py-2 shadow-[0_16px_40px_rgba(15,23,42,0.14)]`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-100 mb-1">
+          <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+            <Clock size={13} className="text-[#157A4F]" />
+            <span>Recent Searches</span>
+          </div>
+          {searchHistory.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAllHistory}
+              className="text-xs font-medium text-gray-400 hover:text-red-500 transition-colors"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+
+        {searchHistory.length === 0 ? (
+          <div className="px-4 py-3 text-center text-xs text-gray-400">
+            No recent searches
+          </div>
+        ) : (
+          <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+            {searchHistory.slice(0, 6).map((item, idx) => (
+              <div
+                key={item.id || item.query || idx}
+                onClick={() => handleSelectHistoryItem(item)}
+                className="group flex items-center justify-between px-4 py-2.5 hover:bg-[#edf8f2] cursor-pointer transition-colors"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+                  <Clock
+                    size={15}
+                    className="shrink-0 text-gray-400 group-hover:text-[#157A4F] transition-colors"
+                  />
+                  <div className="flex items-baseline gap-2 min-w-0 truncate">
+                    <span className="text-[13.5px] font-medium text-gray-800 group-hover:text-[#157A4F] truncate">
+                      {item.query}
+                    </span>
+                    {item.location && (
+                      <span className="text-[11px] text-gray-400 truncate shrink-0">
+                        in {item.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={(e) => handleDeleteHistory(e, item)}
+                  className="p-1 rounded-full text-gray-400 hover:text-red-500 hover:bg-gray-100 transition-colors shrink-0"
+                  title="Remove from history"
+                  aria-label="Remove from history"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       {/* SHARED GRADIENT LAYER — matches reference exactly:
@@ -1108,22 +1310,37 @@ function NavbarContent({
             <div className="flex min-w-0 shrink-0 items-center gap-2">
               <Link
                 href="/"
-                className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 shadow-sm transition hover:opacity-90"
+                className={`flex h-11 w-[138px] items-center justify-center gap-2 rounded-full bg-white px-3 shadow-sm transition-all duration-200 border-2 ${
+                  isAjubajuActive
+                    ? "border-[#157A4F] shadow-[0_2px_8px_rgba(21,122,79,0.18)]"
+                    : "border-transparent hover:border-gray-200 hover:opacity-95"
+                }`}
               >
-                <span
-                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold leading-none text-white"
-                  style={{ background: "#157A4F" }}
-                >A</span>
-                <span className="text-[15px] font-extrabold tracking-wide text-[#157A4F]">
-                  AjuBaju
-                </span>
+                <img
+                  src={isAjubajuActive ? "/images/ajubaju-icon-green.png" : "/images/ajubaju-icon.png"}
+                  alt="AjuBaju Icon"
+                  className="h-[21px] w-auto shrink-0 object-contain"
+                  loading="eager"
+                  draggable={false}
+                />
+                <img
+                  src={isAjubajuActive ? "/images/ajubaju-text-green.png" : "/images/ajubaju-text.png"}
+                  alt="AjuBaju"
+                  className="h-[18px] w-auto shrink-0 object-contain"
+                  loading="eager"
+                  draggable={false}
+                />
               </Link>
               <Link
                 href="/choja"
-                className="hidden h-11 items-center gap-1.5 rounded-full bg-white px-4 shadow-sm transition hover:opacity-90 sm:flex"
+                className={`hidden h-11 w-[138px] items-center justify-center gap-2 rounded-full bg-white px-3 shadow-sm transition-all duration-200 sm:flex border-2 ${
+                  isChojaActive
+                    ? "border-[#157A4F] shadow-[0_2px_8px_rgba(21,122,79,0.18)]"
+                    : "border-transparent hover:border-gray-200 hover:opacity-95"
+                }`}
               >
-                <Briefcase size={16} className="text-[#1f2933]" strokeWidth={2.4} />
-                <span className="text-[15px] font-extrabold tracking-wide text-[#1f2933]">
+                <Briefcase size={17} className={isChojaActive ? "text-[#157A4F]" : "text-[#1f2933]"} strokeWidth={2.4} />
+                <span className={`text-[15px] font-extrabold tracking-wide ${isChojaActive ? "text-[#157A4F]" : "text-[#1f2933]"}`}>
                   CHOJA
                 </span>
               </Link>
@@ -1131,15 +1348,22 @@ function NavbarContent({
           ) : (
             <Link
               href={logoHref}
-              className="flex h-11 items-center gap-1.5 rounded-full bg-white px-4 shadow-sm transition hover:opacity-90"
+              className="flex h-11 w-[138px] items-center justify-center gap-2 rounded-full bg-white px-3 shadow-sm transition-all duration-200 border-2 border-[#157A4F] shadow-[0_2px_8px_rgba(21,122,79,0.18)] hover:opacity-90"
             >
-              <span
-                className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold leading-none text-white"
-                style={{ background: "#157A4F" }}
-              >A</span>
-              <span className="text-[15px] font-extrabold tracking-wide text-[#157A4F]">
-                AjuBaju
-              </span>
+              <img
+                src="/images/ajubaju-icon.png"
+                alt="AjuBaju Icon"
+                className="h-[21px] w-auto shrink-0 object-contain"
+                loading="eager"
+                draggable={false}
+              />
+              <img
+                src="/images/ajubaju-text.png"
+                alt="AjuBaju"
+                className="h-[18px] w-auto shrink-0 object-contain"
+                loading="eager"
+                draggable={false}
+              />
             </Link>
           )}
 
@@ -1150,8 +1374,9 @@ function NavbarContent({
           >
             {/* SEARCH */}
             <div
-              className="flex-[1.4] flex items-center rounded-full bg-white px-5 h-11 shadow-sm"
+              className="relative flex-[1.4] flex items-center rounded-full bg-white px-5 h-11 shadow-sm"
               onClick={(e) => e.stopPropagation()}
+              ref={searchContainerRef}
             >
               <Search size={18} className="mr-2 text-gray-400" />
 
@@ -1160,6 +1385,16 @@ function NavbarContent({
                 value={searchQuery}
                 onChange={(e) => handleSearchInputChange(e.target.value)}
                 onKeyDown={handleSearch}
+                onFocus={() => {
+                  fetchSearchHistory();
+                  setShowSearchHistory(true);
+                  setShowSuggestions(false);
+                }}
+                onClick={() => {
+                  fetchSearchHistory();
+                  setShowSearchHistory(true);
+                  setShowSuggestions(false);
+                }}
                 placeholder="Search listings..."
                 className="flex-1 outline-none text-sm bg-transparent text-black placeholder-gray-500 focus:outline-none"
               />
@@ -1182,10 +1417,13 @@ function NavbarContent({
                   <X size={16} />
                 </button>
               )}
+
+              {/* SEARCH HISTORY DROPDOWN */}
+              {renderSearchHistoryDropdown(false)}
             </div>
 
             {/* LOCATION */}
-            <div className="relative flex-[1] max-w-[260px]" ref={dropdownRef}>
+            <div className="relative flex-[1] min-w-[180px] max-w-[270px]" ref={dropdownRef}>
               <div className="flex items-center rounded-full bg-white px-4 h-11 shadow-sm">
                 <MapPin
                   size={17}
@@ -1202,6 +1440,7 @@ function NavbarContent({
                     setShowSuggestions(true);
                   }}
                   placeholder="Location"
+                  title={location || "Location"}
                   className="w-full min-w-0 outline-none text-sm font-semibold bg-transparent text-[#1f2933] placeholder-gray-500 focus:outline-none"
                 />
 
@@ -1656,7 +1895,10 @@ function NavbarContent({
 
         {/* MOBILE SEARCH + LOCATION ROW */}
         <div className="-mx-4 px-4 py-2 md:hidden">
-          <div className="mx-auto flex h-[46px] w-full max-w-[358px] items-center rounded-full bg-white px-4 shadow-[0_12px_30px_rgba(15,23,42,0.12)]">
+          <div
+            className="relative mx-auto flex h-[46px] w-full max-w-[358px] items-center rounded-full bg-white px-4 shadow-[0_12px_30px_rgba(15,23,42,0.12)]"
+            ref={mobileSearchContainerRef}
+          >
             <div className="flex min-w-0 flex-1 items-center">
               <Search
                 size={19}
@@ -1668,6 +1910,16 @@ function NavbarContent({
                 value={searchQuery}
                 onChange={(e) => handleSearchInputChange(e.target.value)}
                 onKeyDown={handleSearch}
+                onFocus={() => {
+                  fetchSearchHistory();
+                  setShowSearchHistory(true);
+                  setShowSuggestions(false);
+                }}
+                onClick={() => {
+                  fetchSearchHistory();
+                  setShowSearchHistory(true);
+                  setShowSuggestions(false);
+                }}
                 placeholder="Search for services,"
                 className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-[#1f2933] outline-none placeholder:text-[#85878b]"
               />
@@ -1691,6 +1943,9 @@ function NavbarContent({
               )}
             </div>
 
+            {/* SEARCH HISTORY DROPDOWN */}
+            {renderSearchHistoryDropdown(true)}
+
             <div className="relative ml-2 shrink-0" ref={mobileDropdownRef}>
               <div
                 role="button"
@@ -1701,7 +1956,7 @@ function NavbarContent({
                   event.preventDefault();
                   openMobileLocationPicker();
                 }}
-                className="flex h-9 min-w-[84px] max-w-[116px] items-center rounded-full bg-[#f7fffb] px-2.5 text-left"
+                className="flex h-9 min-w-[84px] max-w-[130px] items-center rounded-full bg-[#f7fffb] px-2.5 text-left"
                 aria-label="Change location"
               >
                 <MapPin
@@ -1709,7 +1964,10 @@ function NavbarContent({
                   strokeWidth={2.4}
                   className="mr-1.5 shrink-0 text-[#ff7a1a]"
                 />
-                <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-[#2d2d2d]">
+                <span 
+                  className="min-w-0 flex-1 truncate text-[13px] font-bold text-[#2d2d2d]"
+                  title={location || "Location"}
+                >
                   {location || "Location"}
                 </span>
                 {location && (
@@ -1750,19 +2008,39 @@ function NavbarContent({
           <div className="-mx-4 flex gap-2 px-4 pb-2 pt-2 text-[14px] font-extrabold md:hidden">
             <Link
               href="/"
-              className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[#157A4F] shadow-sm transition hover:opacity-90"
+              className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-white shadow-sm transition-all duration-200 border-2 ${
+                isAjubajuActive
+                  ? "border-[#157A4F] shadow-[0_2px_8px_rgba(21,122,79,0.18)]"
+                  : "border-transparent hover:opacity-95"
+              }`}
             >
-              <span
-                className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold leading-none text-white"
-                style={{ background: "#157A4F" }}
-              >A</span>{" "}
-              AjuBaju
+              <img
+                src={isAjubajuActive ? "/images/ajubaju-icon-green.png" : "/images/ajubaju-icon.png"}
+                alt="AjuBaju Icon"
+                className="h-[20px] w-auto shrink-0 object-contain"
+                loading="eager"
+                draggable={false}
+              />
+              <img
+                src={isAjubajuActive ? "/images/ajubaju-text-green.png" : "/images/ajubaju-text.png"}
+                alt="AjuBaju"
+                className="h-[17px] w-auto shrink-0 object-contain"
+                loading="eager"
+                draggable={false}
+              />
             </Link>
             <Link
               href="/choja"
-              className="flex h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white text-[#1f2933] shadow-sm transition hover:opacity-90"
+              className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-white shadow-sm transition-all duration-200 border-2 ${
+                isChojaActive
+                  ? "border-[#157A4F] shadow-[0_2px_8px_rgba(21,122,79,0.18)] text-[#157A4F]"
+                  : "border-transparent text-[#1f2933] hover:opacity-95"
+              }`}
             >
-              <Briefcase size={15} strokeWidth={2.4} /> CHOJA
+              <Briefcase size={16} strokeWidth={2.4} />
+              <span className="text-[14px] font-extrabold tracking-wide">
+                CHOJA
+              </span>
             </Link>
           </div>
         )}
