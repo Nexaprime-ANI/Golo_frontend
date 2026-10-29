@@ -104,10 +104,8 @@ function normalizeBackendApiBaseUrl(rawValue) {
     return normalizedValue;
 }
 
-export const API_BASE_URL = normalizeBackendApiBaseUrl(
-    process.env.NEXT_PUBLIC_API_URL,
-);
-export const API_ORIGIN_URL = API_BASE_URL;
+export const API_BASE_URL = typeof window !== 'undefined' ? '/api/proxy' : normalizeBackendApiBaseUrl(process.env.INTERNAL_BACKEND_URL || process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002');
+export const API_ORIGIN_URL = typeof window !== 'undefined' ? window.location.origin : normalizeBackendApiBaseUrl(process.env.INTERNAL_BACKEND_URL || process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002');
 
 // ==================== CLOUDINARY URL MASKING ====================
 const _MASKED_BASE = '/media';
@@ -219,11 +217,10 @@ export function clearStoredAuthTokens() {
 
 export async function apiClient(endpoint, options = {}) {
     if (!BASE_URL) {
-        const configError = new Error('NEXT_PUBLIC_API_URL is not configured');
+        const configError = new Error('Service is temporarily unavailable. Please try again later.');
         configError.status = 0;
         configError.data = {
-            message: 'Backend API URL is missing. Set NEXT_PUBLIC_API_URL in the frontend environment.',
-            endpoint,
+            message: 'Service is temporarily unavailable. Please try again later.',
         };
         throw configError;
     }
@@ -253,14 +250,11 @@ export async function apiClient(endpoint, options = {}) {
         response = await fetch(url, config);
     } catch (error) {
         const networkError = new Error(
-            `Unable to connect to API at ${BASE_URL}. ` +
-            `Please ensure the backend is running and NEXT_PUBLIC_API_URL is correct.`
+            'Unable to connect to server. Please check your internet connection or try again later.'
         );
         networkError.status = 0;
         networkError.data = {
-            message: networkError.message,
-            endpoint,
-            url,
+            message: 'Unable to connect to server. Please check your internet connection or try again later.',
         };
         networkError.cause = error;
         throw networkError;
@@ -914,14 +908,14 @@ function markNearbyOffersPrimaryUnsupported() {
     }
 }
 
-function isNearbyOffersPrimaryUnsupported() {
-    if (nearbyOffersRouteMissingOnPrimary) return true;
-    if (typeof window === 'undefined') return false;
+if (typeof window !== 'undefined') {
     try {
-        return localStorage.getItem(NEARBY_OFFERS_PRIMARY_UNSUPPORTED_KEY) === '1';
-    } catch {
-        return false;
-    }
+        localStorage.removeItem(NEARBY_OFFERS_PRIMARY_UNSUPPORTED_KEY);
+    } catch {}
+}
+
+function isNearbyOffersPrimaryUnsupported() {
+    return false;
 }
 
 function emptyNearbyOffersResponse(page = 1, limit = 20) {
@@ -950,9 +944,9 @@ async function fetchAbsoluteJson(url) {
             credentials: 'include',
         });
     } catch (error) {
-        const networkError = new Error(`Unable to connect to ${url}`);
+        const networkError = new Error('Unable to connect to service. Please try again later.');
         networkError.status = 0;
-        networkError.data = { message: networkError.message, url };
+        networkError.data = { message: 'Unable to connect to service. Please try again later.' };
         networkError.cause = error;
         throw networkError;
     }
@@ -1045,22 +1039,8 @@ export async function getNearbyOffers({
 }
 
 export async function getNearbyOfferDetails(offerId) {
-    const endpoint = `/offers/${offerId}`;
-
-    if (isNearbyOffersPrimaryUnsupported()) {
-        return fetchAbsoluteJson(`${LOCAL_BACKEND_URL}${endpoint}`);
-    }
-
-    try {
-        return await apiClient(endpoint);
-    } catch (error) {
-        if (error?.status !== 404) {
-            throw error;
-        }
-
-        markNearbyOffersPrimaryUnsupported();
-        return fetchAbsoluteJson(`${LOCAL_BACKEND_URL}${endpoint}`);
-    }
+    if (!offerId) throw new Error("Offer ID is required");
+    return apiClient(`/offers/${offerId}`);
 }
 
 // ============================================================
@@ -2047,9 +2027,115 @@ export async function logProductView(productId) {
     }
 }
 
-// ==================== UNIFIED SEARCH ====================
-export async function unifiedSearch(query, { type = 'all', page = 1, limit = 15 } = {}) {
-    return apiClient(`/search/unified?q=${encodeURIComponent(query)}&type=${type}&page=${page}&limit=${limit}`);
+// ==================== UNIFIED SEARCH & SEARCH HISTORY ====================
+export function getSearchSessionId() {
+    if (typeof window === 'undefined') return '';
+    try {
+        let sid = localStorage.getItem('ajubaju_search_session_id');
+        if (!sid) {
+            sid = 'sess_' + Math.random().toString(36).slice(2, 11) + '_' + Date.now().toString(36);
+            localStorage.setItem('ajubaju_search_session_id', sid);
+        }
+        return sid;
+    } catch (_e) {
+        return '';
+    }
+}
+
+export async function unifiedSearch(query, { type = 'all', page = 1, limit = 15, location = '', strict = false } = {}) {
+    const sessionId = getSearchSessionId();
+    const locParam = location ? `&location=${encodeURIComponent(location)}` : '';
+    const sessParam = sessionId ? `&sessionId=${encodeURIComponent(sessionId)}` : '';
+    const strictParam = strict ? '&strict=true' : '';
+    return apiClient(`/search/unified?q=${encodeURIComponent(query)}&type=${type}&page=${page}&limit=${limit}${locParam}${sessParam}${strictParam}`);
+}
+
+export async function getSearchHistory({ limit = 6 } = {}) {
+    const sessionId = getSearchSessionId();
+    try {
+        const res = await apiClient(`/search/history?limit=${limit}&sessionId=${encodeURIComponent(sessionId)}`);
+        return res?.data || [];
+    } catch (e) {
+        console.warn('Failed to get search history:', e);
+        return [];
+    }
+}
+
+export async function saveSearchHistory({ query, location = '' } = {}) {
+    if (!query || !query.trim()) return null;
+    const sessionId = getSearchSessionId();
+    try {
+        return await apiClient('/search/history', {
+            method: 'POST',
+            body: JSON.stringify({
+                query: query.trim(),
+                location: (location || '').trim(),
+                sessionId,
+            }),
+        });
+    } catch (e) {
+        console.warn('Failed to save search history:', e);
+        return null;
+    }
+}
+
+export async function createItemDemandRequest({ keyword, originalQuery, userContact, userName, location, notes } = {}) {
+    const sessionId = getSearchSessionId();
+    try {
+        return await apiClient('/search/item-demand-request', {
+            method: 'POST',
+            body: JSON.stringify({
+                keyword,
+                originalQuery,
+                userContact,
+                userName,
+                location,
+                notes,
+                sessionId,
+            }),
+        });
+    } catch (e) {
+        console.warn('Failed to submit item request:', e);
+        return { success: false, message: e.message };
+    }
+}
+
+export async function getZeroResultAnalytics() {
+    try {
+        const res = await apiClient('/search/analytics/zero-result-rate');
+        return res?.data || null;
+    } catch (e) {
+        console.warn('Failed to get zero result analytics:', e);
+        return null;
+    }
+}
+
+export async function deleteSearchHistoryItem({ id, query } = {}) {
+    const sessionId = getSearchSessionId();
+    const params = new URLSearchParams();
+    if (sessionId) params.set('sessionId', sessionId);
+    if (id) params.set('id', id);
+    if (query) params.set('query', query);
+    try {
+        return await apiClient(`/search/history?${params.toString()}`, {
+            method: 'DELETE',
+        });
+    } catch (e) {
+        console.warn('Failed to delete search history item:', e);
+        return { success: false };
+    }
+}
+
+export async function clearSearchHistory() {
+    const sessionId = getSearchSessionId();
+    try {
+        return await apiClient(`/search/history?sessionId=${encodeURIComponent(sessionId)}`, {
+            method: 'DELETE',
+        });
+    } catch (e) {
+        console.warn('Failed to clear search history:', e);
+        return { success: false };
+    }
 }
 
 // ==================== ACCOUNT DELETION ====================

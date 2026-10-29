@@ -167,10 +167,10 @@ function SectionCarousel({ title, items, onItemClick }) {
                       {item.title}
                     </h3>
 
-                    {item.merchantName && (
+                    {(item.storeName || item.merchantName) && (
                       <div className="flex items-center gap-1 text-[11px] sm:text-[12px] font-semibold text-[#5c4a1e] truncate mt-1">
                         <Store size={12} className="shrink-0 text-[#8c7438]" />
-                        <span className="truncate">{item.merchantName}</span>
+                        <span className="truncate">{item.storeName || item.merchantName}</span>
                       </div>
                     )}
 
@@ -271,7 +271,7 @@ function HomeContent() {
                 ...section,
                 items: (section.products || []).map((p, index) => {
                     const isShop = p.type === 'shop' || p.type === 'merchant';
-                    const merchantName = p.merchantName || p.storeName || p.merchant?.name || p.merchant?.storeName || (isShop ? p.title : "");
+                    const storeName = p.storeName || p.merchant?.storeName || p.merchantStoreName || p.merchantName || p.merchant?.name || (isShop ? p.title : "");
                     const location = p.storeLocation || p.merchantLocation || p.location || p.city || p.merchant?.storeLocation || p.merchant?.city || "";
                     const price = p.price !== undefined && p.price !== null && p.price !== "" ? Number(p.price) : null;
                     const originalPrice = p.originalPrice !== undefined && p.originalPrice !== null && p.originalPrice !== "" ? Number(p.originalPrice) : null;
@@ -284,9 +284,10 @@ function HomeContent() {
                         id: p.id || p.offerId || p.merchantId || p.userId || `item-${index}`,
                         offerId: p.offerId || p.id,
                         merchantId: p.merchantId || p.merchant?.merchantId || p.userId,
-                        title: isShop ? (p.storeName || p.merchantName || p.title || 'View Store') : (p.title || "Special Offer"),
+                        title: isShop ? (storeName || p.title || 'View Store') : (p.title || "Special Offer"),
                         subtitle: p.description || p.subtitle || p.businessDescription || "",
-                        merchantName,
+                        storeName,
+                        merchantName: storeName,
                         location,
                         price,
                         originalPrice,

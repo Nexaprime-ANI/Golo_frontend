@@ -2,10 +2,10 @@ import { redirect } from "next/navigation";
 import DealClient from "./DealClient";
 
 function getAbsoluteUrl(path) {
-  if (!path) return "https://www.ajubaju.com/images/default-offer.jpg";
+  if (!path) return "https://ajubaju.co.in/images/merchant_shop_storefront.png";
   if (path.startsWith("http")) return path;
-  if (path.startsWith("/")) return `https://www.ajubaju.com${path}`;
-  return `https://www.ajubaju.com/${path}`;
+  if (path.startsWith("/")) return `https://ajubaju.co.in${path}`;
+  return `https://ajubaju.co.in/${path}`;
 }
 
 export async function generateMetadata(props) {
@@ -16,7 +16,10 @@ export async function generateMetadata(props) {
     if (searchParams?.q || searchParams?.location) {
       return {
         title: "Search Nearby Deals | AjuBaju",
-        description: "Browse nearby deals, offers, and local merchants on AjuBaju."
+        description: "Browse nearby deals, offers, and local merchants on AjuBaju.",
+        alternates: {
+          canonical: "https://ajubaju.co.in/nearby-deals",
+        },
       };
     }
     return {
@@ -35,7 +38,7 @@ export async function generateMetadata(props) {
     const title = offer?.title || offer?.offerTitle || offer?.productName || "AjuBaju Offer";
     const description = offer?.description || "Check out this amazing offer on AjuBaju!";
     
-    let imageUrl = "https://www.ajubaju.com/images/default-offer.jpg";
+    let imageUrl = "https://ajubaju.co.in/images/merchant_shop_storefront.png";
     if (offer?.images && offer.images.length > 0) {
       imageUrl = getAbsoluteUrl(offer.images[0]);
     } else if (offer?.imageUrl) {
@@ -55,13 +58,25 @@ export async function generateMetadata(props) {
       imageUrl = imageUrl.replace(/\.(webp|avif|png|heic)$/i, ".jpg");
     }
 
-    const offerUrl = `https://www.ajubaju.com/nearby-deals/deal?offerId=${encodeURIComponent(offerId)}`;
+    const offerUrl = `https://ajubaju.co.in/nearby-deals/deal?offerId=${encodeURIComponent(offerId)}`;
 
     return {
-      title: `${title} | AjuBaju`,
+      title: `${title} | AjuBaju Deals`,
       description,
+      keywords: [
+        title,
+        offer?.category || "Local Offers",
+        "local deals",
+        "nearby discounts",
+        "discount vouchers",
+        "store offers",
+        "AjuBaju deals",
+      ],
+      alternates: {
+        canonical: offerUrl,
+      },
       openGraph: {
-        title: `Checkout this offer: ${title}`,
+        title: `Checkout this offer: ${title} | AjuBaju`,
         description,
         url: offerUrl,
         siteName: "AjuBaju",
@@ -78,7 +93,7 @@ export async function generateMetadata(props) {
       },
       twitter: {
         card: "summary_large_image",
-        title: `Checkout this offer: ${title}`,
+        title: `Checkout this offer: ${title} | AjuBaju`,
         description,
         images: [imageUrl],
       }
@@ -107,5 +122,100 @@ export default async function DealPage(props) {
     redirect(`/nearby-deals?${params.toString()}`);
   }
 
-  return <DealClient />;
+  let offerSchema = null;
+  let breadcrumbSchema = null;
+
+  if (offerId) {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3002";
+      const res = await fetch(`${baseUrl}/offers/${offerId}`, { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        const offer = json.data || json;
+        if (offer) {
+          const title = offer?.title || offer?.offerTitle || "Special Offer";
+          const desc = offer?.description || `Claim this discount voucher from ${offer?.merchant?.name || "verified merchant"} on AjuBaju.`;
+          const price = Number(offer?.displayPrice ?? offer?.totalPrice ?? 0);
+          const offerUrl = `https://ajubaju.co.in/nearby-deals/deal?offerId=${encodeURIComponent(offerId)}`;
+
+          let imgUrl = "https://ajubaju.co.in/images/merchant_shop_storefront.png";
+          if (offer?.images?.[0]) imgUrl = getAbsoluteUrl(offer.images[0]);
+          else if (offer?.imageUrl) imgUrl = getAbsoluteUrl(offer.imageUrl);
+          else if (offer?.merchant?.shopPhoto) imgUrl = getAbsoluteUrl(offer.merchant.shopPhoto);
+
+          offerSchema = {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": title,
+            "description": desc,
+            "image": imgUrl,
+            "category": offer?.category || "Local Offers",
+            "offers": {
+              "@type": "Offer",
+              "url": offerUrl,
+              "price": price,
+              "priceCurrency": "INR",
+              "availability": "https://schema.org/InStock",
+              ...(offer?.startsAt ? { "validFrom": offer.startsAt } : {}),
+              ...(offer?.endsAt ? { "priceValidUntil": offer.endsAt } : {}),
+              ...(offer?.merchant?.name
+                ? {
+                    "seller": {
+                      "@type": "LocalBusiness",
+                      "name": offer.merchant.name,
+                      ...(offer.merchant.address ? { "address": offer.merchant.address } : {}),
+                    },
+                  }
+                : {}),
+            },
+          };
+
+          breadcrumbSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Home",
+                "item": "https://ajubaju.co.in",
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "Nearby Deals",
+                "item": "https://ajubaju.co.in/nearby-deals",
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": title,
+                "item": offerUrl,
+              },
+            ],
+          };
+        }
+      }
+    } catch (e) {
+      // Non-blocking schema fallback
+    }
+  }
+
+  return (
+    <>
+      {offerSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(offerSchema) }}
+        />
+      )}
+      {breadcrumbSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        />
+      )}
+      <DealClient />
+    </>
+  );
 }

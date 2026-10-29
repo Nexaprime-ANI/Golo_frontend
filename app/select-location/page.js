@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Crosshair, Loader2, MapPin, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { reverseGeocode, searchLocations } from "../services/leafletService";
+import { reverseGeocode, searchLocations, getIpLocation } from "../services/leafletService";
 
 const CURRENT_LOCATION_STORAGE_KEY = "golo_current_location";
 
@@ -17,6 +17,20 @@ const popularLocations = [
 ];
 
 function getReadableLocation(locationDetails) {
+  if (!locationDetails) return "";
+
+  if (locationDetails.label && locationDetails.label !== "Current Location") {
+    return locationDetails.label;
+  }
+
+  const area = locationDetails.area?.trim();
+  const city = locationDetails.city?.trim();
+  if (area && city && area.toLowerCase() !== city.toLowerCase()) {
+    return `${area}, ${city}`;
+  }
+  if (city) return city;
+  if (area) return area;
+
   const rawAddress = String(
     locationDetails?.address ||
     locationDetails?.displayName ||
@@ -28,10 +42,12 @@ function getReadableLocation(locationDetails) {
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean)
-    .filter((part) => !/^\d{4,}$/.test(part));
+    .filter((part) => !/^\d{4,}$/.test(part))
+    .filter((part) => part.toLowerCase() !== "india");
 
-  if (parts.length >= 2) return parts.slice(0, 3).join(", ");
-  return parts[0] || "Current Location";
+  if (parts.length >= 2) return `${parts[0]}, ${parts[1]}`;
+  if (parts.length === 1 && parts[0] !== "Current Location") return parts[0];
+  return "";
 }
 
 function normalizeRedirect(rawRedirect) {
@@ -118,24 +134,11 @@ function SelectLocationContent() {
   };
 
   const handleCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setMessage("Location access is not available on this device.");
-      return;
-    }
-
     setMessage("");
     setDetecting(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const coordinates = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
 
-        let label = "Current Location";
-        const details = await reverseGeocode(coordinates.lng, coordinates.lat);
-        if (details) label = getReadableLocation(details);
-
+    const finishWithLocation = (label, coordinates) => {
+      if (label && label !== "Current Location") {
         localStorage.setItem(
           CURRENT_LOCATION_STORAGE_KEY,
           JSON.stringify({
@@ -144,13 +147,51 @@ function SelectLocationContent() {
             updatedAt: Date.now(),
           }),
         );
+      }
+      setDetecting(false);
+      openWithLocation(label, coordinates, true);
+    };
 
-        setDetecting(false);
-        openWithLocation(label, coordinates, true);
+    const fallbackToIp = async () => {
+      try {
+        const ipLocation = await getIpLocation();
+        if (ipLocation && (ipLocation.city || ipLocation.label)) {
+          const label = getReadableLocation(ipLocation) || ipLocation.city || "";
+          if (label) {
+            finishWithLocation(label, ipLocation.coordinates);
+            return;
+          }
+        }
+      } catch (e) {}
+      setDetecting(false);
+      setMessage("Please allow location access or search your area manually.");
+    };
+
+    if (!navigator.geolocation) {
+      fallbackToIp();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const coordinates = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        };
+
+        try {
+          const details = await reverseGeocode(coordinates.lng, coordinates.lat);
+          let label = details ? getReadableLocation(details) : "";
+          if (label && label !== "Current Location") {
+            finishWithLocation(label, coordinates);
+            return;
+          }
+        } catch (e) {}
+
+        await fallbackToIp();
       },
-      () => {
-        setDetecting(false);
-        setMessage("Please allow location access or search your area manually.");
+      async () => {
+        await fallbackToIp();
       },
       {
         enableHighAccuracy: true,

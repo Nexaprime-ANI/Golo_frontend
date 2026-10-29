@@ -206,7 +206,7 @@ export default function FormSidebar({
             ? "General"
             : (selectedCategory?.subCategory || rawCategoryName || "General")),
         // Swap out dummy logic with our permanently uploaded Cloudinary URLs
-        images: uploadedUrls,
+        images: uploadedUrls.filter((u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://'))),
         price: resolvedPrice,
         location: cities?.[0] || "India",
         city: cities?.[0] || "",

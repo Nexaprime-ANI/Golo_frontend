@@ -157,14 +157,20 @@ export default function LoginPage() {
                 style={{ width: 340 }}
               >
                 {/* AjuBaju Logo row */}
-                <div className="flex items-center gap-2 self-end mb-4">
-                  {/* Diamond logo icon */}
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 9l10 13 10-13L12 2z" fill="#157A4F" fillOpacity="0.15" stroke="#157A4F" strokeWidth="1.5"/>
-                    <path d="M12 2L2 9h20L12 2z" fill="#157A4F" fillOpacity="0.35"/>
-                  </svg>
-                  <span className="text-[15px] font-bold text-gray-800 tracking-wide">AjuBaju</span>
-                </div>
+                <Link href="/" className="flex items-center gap-2 self-end mb-4 transition-opacity hover:opacity-85">
+                  <img
+                    src="/images/ajubaju-icon.png"
+                    alt="AjuBaju Icon"
+                    className="h-[21px] w-auto shrink-0 object-contain"
+                    loading="eager"
+                  />
+                  <img
+                    src="/images/ajubaju-text.png"
+                    alt="AjuBaju"
+                    className="h-[17px] w-auto shrink-0 object-contain"
+                    loading="eager"
+                  />
+                </Link>
 
                 {/* Shopping cart illustration */}
                 <div className="relative flex items-center justify-center" style={{ height: 200 }}>
@@ -254,6 +260,22 @@ export default function LoginPage() {
           {/* ─── RIGHT PANEL ─── */}
           <div className="flex flex-1 items-center justify-center bg-white px-6 py-10">
             <div className="w-full max-w-[420px]">
+              {/* Mobile Brand Logo */}
+              <div className="lg:hidden flex items-center justify-center mb-6">
+                <Link href="/" className="flex items-center gap-2 transition-opacity hover:opacity-85">
+                  <img
+                    src="/images/ajubaju-icon.png"
+                    alt="AjuBaju Icon"
+                    className="h-6 w-auto shrink-0 object-contain"
+                  />
+                  <img
+                    src="/images/ajubaju-text.png"
+                    alt="AjuBaju"
+                    className="h-5 w-auto shrink-0 object-contain"
+                  />
+                </Link>
+              </div>
+
               {/* Title */}
               <h1 className="text-[26px] font-extrabold text-gray-900 text-center mb-1">
                 Welcome to AjuBaju Network Group

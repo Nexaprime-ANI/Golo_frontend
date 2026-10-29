@@ -160,8 +160,8 @@ export default function MerchantProductDetailsContent() {
         stockQuantity: parsedStock,
         price: parsedPrice,
         description: (formData.description || "").trim(),
-        images: uploadedUrls,
-        videoUrl: uploadedVideoUrl,
+        images: uploadedUrls.filter((u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://'))),
+        videoUrl: uploadedVideoUrl && (uploadedVideoUrl.startsWith('http://') || uploadedVideoUrl.startsWith('https://')) ? uploadedVideoUrl : undefined,
       };
 
       const res = await updateMerchantProduct(productId, payload);

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { API_BASE_URL, setStoredAuthTokens, clearStoredAuthTokens } from "../lib/api/core";
+import { API_BASE_URL, setStoredAuthTokens, clearStoredAuthTokens, getStoredAccessToken, getStoredRefreshToken } from "../lib/api/core";
 import { loginUser, registerUser, logoutUser } from "../lib/api/auth";
 import { getProfile } from "../lib/api/user";
 import { updateMerchantStoreLocation } from "../lib/api/merchant";;
@@ -28,7 +28,12 @@ export function AuthProvider({ children }) {
         let mounted = true;
 
         (async () => {
-            try {
+            const hasToken = Boolean(getStoredAccessToken() || getStoredRefreshToken() || (typeof window !== 'undefined' && (localStorage.getItem('token') || localStorage.getItem('accessToken'))));
+        if (!hasToken) {
+            if (mounted) setLoading(false);
+            return;
+        }
+        try {
                 const response = await getProfile();
                 if (!mounted) return;
                 const profileUser = response?.data;

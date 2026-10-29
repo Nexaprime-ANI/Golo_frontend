@@ -1,0 +1,703 @@
+"use client";
+
+import Image from "next/image";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { MapPin, Phone, Star, ArrowRight, ExternalLink, ShieldCheck, ShoppingBag, UserPlus, Check } from "lucide-react";
+import dynamic from "next/dynamic";
+import Navbar from "../../components/Navbar";
+import Footer from "../../components/Footer";
+import { getNearbyOffers } from "../../lib/api/ads";
+import { getPublicMerchantProducts, getPublicMerchantProfile, getPublicMerchantStoreLocation, getPublicMerchantReviewStats, toggleFollowMerchant, checkFollowStatus } from "../../lib/api/merchant";
+
+// Dynamically import Leaflet map
+const LeafletMap = dynamic(() => import("../../components/LeafletMap"), { ssr: false });
+
+export default function NearbyStorePage() {
+  return (
+    <Suspense fallback={<StoreLoadingSkeleton />}>
+      <NearbyStoreContent />
+    </Suspense>
+  );
+}
+
+function StoreLoadingSkeleton() {
+  return (
+    <main className="relative z-10 min-h-screen bg-transparent">
+      <Navbar />
+      <div className="relative z-10 mx-auto max-w-[1260px] px-4 lg:px-6 pt-10 md:pt-14 pb-4 lg:pb-6">
+        <div className="mb-4 h-3 w-56 animate-pulse rounded bg-[#dfe4ea]" />
+        <section className="mb-8 overflow-hidden rounded-2xl bg-white shadow-sm">
+          <div className="grid gap-6 p-4 lg:grid-cols-[1.5fr_1fr] lg:p-6">
+            <div className="h-[300px] animate-pulse rounded-xl bg-[#e4e9ef] lg:h-[400px]" />
+            <div className="space-y-4">
+              <div className="flex justify-between gap-3">
+                <div className="space-y-3 flex-1">
+                  <div className="h-8 w-4/5 animate-pulse rounded bg-[#dfe4ea]" />
+                  <div className="h-8 w-3/5 animate-pulse rounded bg-[#edf1f5]" />
+                </div>
+                <div className="flex gap-2">
+                  <div className="h-10 w-10 animate-pulse rounded-full bg-[#edf1f5]" />
+                  <div className="h-10 w-10 animate-pulse rounded-full bg-[#edf1f5]" />
+                </div>
+              </div>
+              <div className="h-14 animate-pulse rounded-xl bg-[#f0f3f7]" />
+              <div className="h-32 animate-pulse rounded-xl bg-[#fff0cf]" />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="h-20 animate-pulse rounded-lg bg-[#edf2ff]" />
+                <div className="h-20 animate-pulse rounded-lg bg-[#fff0cf]" />
+              </div>
+            </div>
+          </div>
+        </section>
+        <section className="grid gap-6 lg:grid-cols-[1.75fr_1fr]">
+          <div className="space-y-3">
+            <div className="h-8 w-64 animate-pulse rounded bg-[#dfe4ea]" />
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="flex items-center gap-3 rounded-[12px] border border-[#d8dce3] bg-white p-3">
+                <div className="h-16 w-16 animate-pulse rounded-lg bg-[#e4e9ef]" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-3/5 animate-pulse rounded bg-[#dfe4ea]" />
+                  <div className="h-3 w-2/5 animate-pulse rounded bg-[#edf1f5]" />
+                </div>
+                <div className="h-8 w-20 animate-pulse rounded bg-[#edf1f5]" />
+              </div>
+            ))}
+          </div>
+          <div className="h-64 animate-pulse rounded-[12px] bg-white" />
+        </section>
+      </div>
+      <Footer />
+    </main>
+  );
+}
+
+function NearbyStoreContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [merchant, setMerchant] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [products, setProducts] = useState([]);
+  const [offers, setOffers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [merchantId, setMerchantId] = useState(null);
+  const [reviewStats, setReviewStats] = useState({ averageRating: 0, totalReviews: 0 });
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+
+  // Prefer the URL so direct links are never overridden by stale session state.
+  useEffect(() => {
+    const stored = sessionStorage.getItem("merchantId");
+    const fromUrl = searchParams.get("merchantId");
+    const id = fromUrl || stored;
+    
+    if (id) {
+      setMerchantId(id);
+      // Clear sessionStorage after reading to avoid persistence
+      if (stored) {
+        sessionStorage.removeItem("merchantId");
+      }
+    } else {
+      setMerchantId(null);
+      if (searchParams.get("q") || searchParams.get("location")) {
+        router.replace(`/nearby-deals?${searchParams.toString()}`);
+      }
+    }
+  }, [searchParams]);
+
+  const normalizeId = (value) => String(value || "").trim();
+
+  const extractOffers = (response) => {
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.data?.offers)) return response.data.offers;
+    if (Array.isArray(response?.data?.items)) return response.data.items;
+    if (Array.isArray(response?.offers)) return response.offers;
+    if (Array.isArray(response?.items)) return response.items;
+    return [];
+  };
+
+  const extractProducts = (response) => {
+    if (Array.isArray(response?.data?.products)) return response.data.products;
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.products)) return response.products;
+    return [];
+  };
+
+  const dedupeProducts = (items = []) => {
+    const map = new Map();
+
+    items.forEach((item) => {
+      const key = String(item?.productId || item?.id || item?.name || "");
+      if (!key || map.has(key)) return;
+      map.set(key, item);
+    });
+
+    return Array.from(map.values());
+  };
+
+  useEffect(() => {
+    const loadMerchantData = async () => {
+      const id = merchantId;
+      if (!id) {
+        setError("Invalid merchant ID");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
+
+        const [profileData, locationData, productsData, merchantOffersRes, reviewData, followData] = await Promise.all([
+          getPublicMerchantProfile(id),
+          getPublicMerchantStoreLocation(id),
+          getPublicMerchantProducts(id),
+          getNearbyOffers({ merchantId: id }),
+          getPublicMerchantReviewStats(id),
+          checkFollowStatus(id).catch(() => ({ success: true, isFollowing: false }))
+        ]);
+
+        if (followData && followData.isFollowing !== undefined) {
+            setIsFollowing(followData.isFollowing);
+        }
+
+        if (!profileData?.data) {
+          setError("Store not found");
+          setLoading(false);
+          return;
+        }
+
+        const data = profileData.data;
+        const canonicalMerchantId = normalizeId(
+          data?.userId || data?.merchantId || id
+        );
+        const acceptedMerchantIds = new Set(
+          [
+            merchantId,
+            canonicalMerchantId,
+            profileData?._id,
+            profileData?.id,
+          ]
+            .map(normalizeId)
+            .filter(Boolean)
+        );
+
+        const merchantOffers = extractOffers(merchantOffersRes);
+        setOffers(merchantOffers);
+
+        const firstOfferMerchant = merchantOffers[0]?.merchant || null;
+        const mergedMerchant = {
+          ...data,
+          name: data?.storeName || firstOfferMerchant?.name || data?.name,
+          profilePhoto: data?.profilePhoto || firstOfferMerchant?.profilePhoto,
+          shopPhoto:
+            data?.shopPhoto ||
+            data?.merchantProfile?.shopPhoto ||
+            firstOfferMerchant?.shopPhoto ||
+            "",
+          merchantProfile: data?.merchantProfile || data,
+          profile: {
+            ...(data?.profile || {}),
+            address:
+              data?.profile?.address ||
+              data?.storeLocation ||
+              data?.merchantProfile?.storeLocation ||
+              firstOfferMerchant?.address ||
+              "",
+            phone:
+              data?.profile?.phone ||
+              data?.contactNumber ||
+              data?.merchantProfile?.contactNumber ||
+              "",
+          },
+        };
+
+        setMerchant(mergedMerchant);
+
+        const fallbackProducts = dedupeProducts(
+          merchantOffers.flatMap((offer) =>
+            Array.isArray(offer?.selectedProducts)
+              ? offer.selectedProducts.map((product) => ({
+                  ...product,
+                  id: product?.productId,
+                  name: product?.productName,
+                  price: Number(product?.offerPrice || 0),
+                  originalPrice: Number(product?.originalPrice || 0),
+                  image: product?.imageUrl || "",
+                  category: offer?.category || "Product",
+                }))
+              : [],
+          ),
+        );
+
+        setProducts(fallbackProducts);
+        setLocation(null);
+
+        try {
+          const locationRes = await getPublicMerchantStoreLocation(canonicalMerchantId);
+          if (locationRes?.data) {
+            setLocation(locationRes.data);
+          }
+        } catch {
+        }
+
+        try {
+          const productsRes = await getPublicMerchantProducts(canonicalMerchantId, { limit: 100 });
+          const publicProducts = extractProducts(productsRes);
+          if (publicProducts.length > 0) {
+            setProducts(publicProducts);
+          }
+        } catch {
+        }
+
+        try {
+          const statsRes = await getPublicMerchantReviewStats(canonicalMerchantId);
+          if (statsRes?.success && statsRes?.data) {
+            setReviewStats({
+              averageRating: Number(statsRes.data.averageRating || 0),
+              totalReviews: Number(statsRes.data.totalReviews || 0),
+            });
+          }
+        } catch {
+          // reviews may not be available yet
+        }
+      } catch (err) {
+        console.error("Error loading merchant data:", err);
+        setError(err?.data?.message || err?.message || "Failed to load merchant data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadMerchantData();
+  }, [merchantId]);
+
+  const handleFollow = async () => {
+    if (!merchantId) return;
+    setFollowLoading(true);
+    try {
+        const data = await toggleFollowMerchant(merchantId);
+        if (data && data.success) {
+            setIsFollowing(data.isFollowing);
+        }
+    } catch (err) {
+        console.error(err);
+        // If unauthenticated, redirect to login
+        if (err.message === 'User not authenticated') {
+            router.push('/login');
+        } else {
+            alert('Failed to follow store. Are you logged in?');
+            router.push('/login');
+        }
+    } finally {
+        setFollowLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <StoreLoadingSkeleton />;
+  }
+
+  if (error || !merchant) {
+    return (
+      <main className="min-h-screen bg-[#f3f3f3]">
+        <Navbar />
+        <div className="mx-auto max-w-[1260px] px-6 py-20">
+          <div className="rounded-xl border border-[#fecaca] bg-[#fff1f2] p-6 text-sm text-[#b91c1c]">
+            {error || "Store not found"}
+          </div>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
+
+  const offerLocation = offers[0]?.merchant || null;
+  const resolvedLatitude = Number(
+    location?.latitude ??
+      merchant?.merchantProfile?.storeLocationLatitude ??
+      offerLocation?.latitude,
+  );
+  const resolvedLongitude = Number(
+    location?.longitude ??
+      merchant?.merchantProfile?.storeLocationLongitude ??
+      offerLocation?.longitude,
+  );
+  const hasMapLocation =
+    !Number.isNaN(resolvedLatitude) &&
+    !Number.isNaN(resolvedLongitude) &&
+    resolvedLatitude !== 0 &&
+    resolvedLongitude !== 0;
+  const resolvedAddress =
+    location?.address ||
+    merchant?.profile?.address ||
+    merchant?.merchantProfile?.storeLocation ||
+    offerLocation?.address ||
+    "";
+  const resolvedPhone =
+    merchant?.profile?.phone ||
+    merchant?.merchantProfile?.contactNumber ||
+    "";
+  const resolvedBio =
+    merchant?.profile?.bio ||
+    merchant?.merchantProfile?.storeSubCategory ||
+    "Premium services and products from our trusted merchant";
+  const resolvedStoreImage =
+    merchant?.shopPhoto ||
+    merchant?.merchantProfile?.shopPhoto ||
+    offers[0]?.merchant?.shopPhoto ||
+    products.find((item) => item?.image || item?.imageUrl)?.image ||
+    products.find((item) => item?.image || item?.imageUrl)?.imageUrl ||
+    merchant?.profilePhoto ||
+    "/images/default-user-avatar.jpg";
+
+  const storeCategory = merchant?.profile?.category || merchant?.merchantProfile?.storeCategory || merchant?.category || "Store";
+  const storeSubCategory = merchant?.profile?.subCategory || merchant?.merchantProfile?.storeSubCategory || merchant?.subCategory || "";
+  const categoryDisplay = storeSubCategory && storeCategory !== storeSubCategory ? `${storeCategory} • ${storeSubCategory}` : storeCategory;
+  const merchantRole = merchant?.profile?.merchantRole || merchant?.merchantProfile?.merchantRole || merchant?.merchantRole || "Merchant";
+  const roleDisplay = merchantRole === 'Both' ? 'Merchant & Service Provider' : merchantRole;
+
+  return (
+    <main className="relative z-10 min-h-screen bg-transparent">
+      <Navbar />
+
+      <div className="relative z-10 mx-auto max-w-[1260px] px-4 lg:px-6 pb-14 pt-10 md:pt-14">
+        {/* Store Header Card */}
+        <div className="rounded-2xl border border-[#d8dce3] bg-white p-5 lg:p-7 shadow-sm mb-6 mt-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 overflow-hidden rounded-full border-2 border-[#1f8f4f] shrink-0 lg:h-20 lg:w-20">
+                <Image
+                  src={merchant?.profilePhoto || merchant?.merchantProfile?.profilePhoto || resolvedStoreImage}
+                  alt={merchant?.name || "Store"}
+                  width={80}
+                  height={80}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              </div>
+              <h1 className="text-3xl lg:text-4xl font-bold leading-tight lg:leading-none text-[#1f2329]">
+                {merchant?.name || "Store"}
+              </h1>
+            </div>
+            <button 
+              onClick={handleFollow} 
+              disabled={followLoading}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-sm disabled:opacity-70 ${isFollowing ? 'bg-[#f1f5f9] text-[#1f2329] border border-[#e2e8f0] hover:bg-[#e2e8f0]' : 'bg-[#157a4f] text-white hover:bg-[#116340] hover:shadow-md'}`}
+            >
+              {isFollowing ? (
+                  <>
+                      <Check className="w-5 h-5 text-[#157a4f]" />
+                      Following
+                  </>
+              ) : (
+                  <>
+                      <UserPlus className="w-5 h-5" />
+                      Follow
+                  </>
+              )}
+            </button>
+          </div>
+          
+          <p className="mt-4 text-sm lg:text-base text-[#67707b]">
+            {resolvedBio}
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs lg:text-sm text-[#4e5965] border-t border-[#e5e8ec] pt-4">
+            {roleDisplay && (
+              <span className="font-semibold text-white bg-[#1f2329] px-3 py-1 rounded-full">{roleDisplay}</span>
+            )}
+            <span className="font-semibold text-[#157a4f] bg-[#eef6ef] px-3 py-1 rounded-full">{categoryDisplay}</span>
+
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-[#f2b632]">★</span>
+              <span>
+                <span className="font-semibold text-[#1f2329]">{reviewStats.averageRating ? reviewStats.averageRating.toFixed(1) : "0.0"}</span>
+                {" "}({reviewStats.totalReviews.toLocaleString()} Reviews)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Section */}
+        <section className="mt-6 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          {/* Store Image */}
+          <div className="overflow-hidden rounded-2xl border border-[#d8dce3] bg-white shadow-sm h-full flex">
+            <div className="relative w-full h-full min-h-[320px] lg:min-h-[384px]">
+              <Image
+                src={resolvedStoreImage}
+                alt={merchant?.name || "Store"}
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          </div>
+
+          {/* Store Info Card */}
+          <aside className="rounded-2xl border border-[#d8dce3] bg-white p-4 shadow-sm sm:p-6">
+            <h2 className="text-2xl font-bold text-[#1f2329] mb-4">Store Information</h2>
+            
+            <div className="space-y-3 text-sm text-[#5f6974] border-b border-[#e5e8ec] pb-4 mb-4">
+              {resolvedPhone && (
+                <p><Phone size={14} className="mr-2 inline text-[#157a4f]" /> {resolvedPhone}</p>
+              )}
+              {merchant?.profile?.city && (
+                <p><MapPin size={14} className="mr-2 inline text-[#157a4f]" /> 
+                  {merchant.profile.city}
+                  {merchant.profile.state && `, ${merchant.profile.state}`}
+                </p>
+              )}
+              {merchant?.profile?.address && (
+                <p className="text-xs text-[#666]">{merchant.profile.address}</p>
+              )}
+              {merchant?.profile?.bio && (
+                <p className="mt-3 pt-3 border-t text-[#5d6670] text-xs leading-relaxed">{merchant.profile.bio}</p>
+              )}
+            </div>
+
+            {merchant?.profile?.interests && merchant.profile.interests.length > 0 && (
+              <div className="border-b border-[#e5e8ec] pb-4 mb-4">
+                <p className="text-xs font-bold text-[#4a5fc1] uppercase tracking-wide mb-2">Categories</p>
+                <div className="flex flex-wrap gap-2">
+                  {merchant.profile.interests.slice(0, 3).map((cat, idx) => (
+                    <span key={`${cat}-${idx}`} className="text-xs bg-[#f0f4ff] text-[#4a5fc1] px-2 py-1 rounded-full">
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-[#157a4f] uppercase tracking-wide">Store Location</p>
+                  <p className="text-sm font-semibold text-[#1f2329] mt-1">
+                    {resolvedAddress || "Merchant address will appear here once available"}
+                  </p>
+                </div>
+                {hasMapLocation ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#ecf8f1] px-3 py-1 text-[11px] font-semibold text-[#157a4f]">
+                    <MapPin size={12} />
+                    Live Pin
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-[#d8dce3] bg-[#f7faf8]">
+                {hasMapLocation ? (
+                  <div className="h-[240px]">
+                    <LeafletMap
+                      latitude={resolvedLatitude}
+                      longitude={resolvedLongitude}
+                      markerTitle={merchant?.name || "Merchant Store"}
+                      zoom={15}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-[240px] items-center justify-center px-6 text-center">
+                    <div>
+                      <p className="text-sm font-semibold text-[#1f2329]">Location pin unavailable</p>
+                      <p className="mt-2 text-xs leading-relaxed text-[#66707c]">
+                        Store coordinates have not been added for this merchant yet, so the live map cannot be shown.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {hasMapLocation ? (
+                <p className="text-[11px] text-[#66707c]">
+                  Pinpoint map showing the merchant store for easier tracking and navigation.
+                </p>
+              ) : null}
+            </div>
+          </aside>
+        </section>
+
+                {/* Content Sections Container */}
+                <div className="mt-12 space-y-10">
+          
+                  {/* Popular Services Section */}
+                  {offers.length > 0 && (
+                    <section className="bg-white rounded-[32px] border border-[#eef2f6] p-6 lg:p-8 shadow-sm">
+                      <div className="flex items-center gap-2 mb-6">
+                        <div className="w-8 h-8 bg-[#f0f9f6] rounded-lg flex items-center justify-center text-[#157a4f]">
+                          <ShieldCheck size={20} />
+                        </div>
+                        <h2 className="text-xl font-bold text-[#1f2329]">Popular Deals</h2>
+                      </div>
+
+                      <div className="-mx-4 px-4 overflow-x-auto">
+                        <div className="flex gap-4 w-max sm:gap-5">
+                          {offers.slice(0, 8).map((offer, idx) => (
+                            <div key={offer?.offerId || offer?._id || `popular-offer-${idx}`} className="flex-none min-w-[calc(100vw-4rem)] sm:min-w-[280px]">
+                              <div
+                                className="group bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden hover:shadow-lg hover:border-[#157a4f] transition-all duration-300 flex flex-col cursor-pointer h-full"
+                                onClick={() => router.push(`/nearby-deals/deal?offerId=${offer.offerId}`)}
+                              >
+                                <div className="relative h-40 overflow-hidden bg-[#f8fafc]">
+                                  <Image
+                                    src={offer?.imageUrl || "/images/deal2.avif"}
+                                    alt={offer?.title || "Offer"}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
+                                  <div className="absolute top-2 left-2 bg-[#157a4f] text-white px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                    Popular
+                                  </div>
+                                </div>
+                                <div className="p-4 flex flex-col flex-1">
+                                  <div className="mb-3">
+                                    <p className="text-[9px] font-bold text-[#4a5fc1] uppercase tracking-wider mb-1">{offer?.category || "Service"}</p>
+                                    <h3 className="font-bold text-[#1e293b] text-sm line-clamp-1 group-hover:text-[#157a4f] transition-colors">
+                                      {offer?.title}
+                                    </h3>
+                                  </div>
+                                  <div className="mt-auto">
+                                    <div className="flex items-baseline justify-between mb-3">
+                                      <span className="text-lg font-black text-[#157a4f]">Rs.{offer?.totalPrice?.toLocaleString("en-IN")}</span>
+                                    </div>
+                                    <button className="w-full h-9 bg-[#f0f9f6] text-[#157a4f] rounded-lg font-bold text-[11px] hover:bg-[#157a4f] hover:text-white border border-[#157a4f]/5 transition-all">
+                                      View Details
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Products Section */}
+                  {products.length > 0 && (
+                    <section className="bg-white rounded-[32px] border border-[#eef2f6] p-6 lg:p-8 shadow-sm">
+                      <div className="flex items-center gap-2 mb-6">
+                        <div className="w-8 h-8 bg-[#fef5e7] rounded-lg flex items-center justify-center text-[#e7a91d]">
+                          <ShoppingBag size={20} />
+                        </div>
+                        <h2 className="text-xl font-bold text-[#1f2329]">Products</h2>
+                      </div>
+
+                      <div className="-mx-4 px-4 overflow-x-auto">
+                        <div className="flex gap-4 w-max sm:gap-5">
+                          {products.map((product, idx) => (
+                            <div key={product?._id || product?.productId || product?.id || `${product?.name || 'product'}-${idx}`} className="flex-none min-w-[calc(100vw-4rem)] sm:min-w-[260px]">
+                              <div className="group bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden hover:shadow-lg hover:border-[#157a4f] transition-all duration-300 flex flex-col h-full">
+                                <div className="relative h-40 overflow-hidden bg-[#f8fafc]">
+                                  <Image
+                                    src={product?.image || product?.imageUrl || "/images/place2.avif"}
+                                    alt={product?.name || "Product"}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
+                                  {product?.originalPrice > product?.price && (
+                                    <div className="absolute top-2 right-2 bg-[#e7a91d] text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow-sm">
+                                      -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="p-4 flex flex-col flex-1">
+                                  <div className="mb-3">
+                                    <p className="text-[9px] font-bold text-[#4a5fc1] uppercase tracking-wider mb-1">{product?.category || "Item"}</p>
+                                    <h3 className="font-bold text-[#1e293b] text-sm line-clamp-1 group-hover:text-[#157a4f] transition-colors">
+                                      {product?.name}
+                                    </h3>
+                                  </div>
+
+                                  <div className="mt-auto">
+                                    <div className="flex items-baseline justify-between mb-3">
+                                      <span className="text-lg font-black text-[#157a4f]">Rs.{product?.price?.toLocaleString("en-IN") || "0"}</span>
+                                    </div>
+                                    <button 
+                                      onClick={() => {
+                                        const pid = product?.productId || product?._id || product?.id;
+                                        if (pid) {
+                                          router.push(`/nearby-deals/product?id=${encodeURIComponent(pid)}`);
+                                        }
+                                      }}
+                                      className="w-full h-9 bg-[#f0f9f6] text-[#157a4f] rounded-lg font-bold text-[11px] hover:bg-[#157a4f] hover:text-white border border-[#157a4f]/5 transition-all"
+                                    >
+                                      View Product
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* All Offers Section */}
+                  {offers.length > 1 && (
+                    <section className="bg-white rounded-[32px] border border-[#eef2f6] p-6 lg:p-8 shadow-sm">
+                      <div className="flex items-center gap-2 mb-6">
+                        <div className="w-8 h-8 bg-[#f0f4ff] rounded-lg flex items-center justify-center text-[#4a5fc1]">
+                          <Star size={20} />
+                        </div>
+                        <h2 className="text-xl font-bold text-[#1f2329]">Exclusive Offers</h2>
+                      </div>
+
+                      <div className="-mx-4 px-4 overflow-x-auto">
+                        <div className="flex gap-4 w-max sm:gap-5">
+                          {offers.slice(1).map((offer, idx) => (
+                            <div key={offer?.offerId || offer?._id || `offer-${idx}`} className="flex-none min-w-[calc(100vw-4rem)] sm:min-w-[280px]">
+                              <div
+                                onClick={() => router.push(`/nearby-deals/deal?offerId=${offer.offerId}`)}
+                                className="group bg-white rounded-2xl border border-[#f1f5f9] overflow-hidden hover:shadow-lg hover:border-[#4a5fc1] transition-all duration-300 flex flex-col cursor-pointer h-full"
+                              >
+                                <div className="relative h-40 overflow-hidden">
+                                  <Image
+                                    src={offer?.imageUrl || "/images/deal2.avif"}
+                                    alt={offer?.title || "Offer"}
+                                    fill
+                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                  />
+                                  <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-[#1f2329] px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">
+                                    Offer
+                                  </div>
+                                </div>
+                                <div className="p-4 flex flex-col flex-1">
+                                  <div className="mb-3">
+                                    <span className="text-[9px] font-bold text-[#4a5fc1] uppercase tracking-wider block mb-1">{offer?.category || "Special"}</span>
+                                    <h3 className="font-bold text-[#1e293b] text-sm line-clamp-1 group-hover:text-[#4a5fc1] transition-colors">
+                                      {offer?.title}
+                                    </h3>
+                                  </div>
+                                  <div className="mt-auto">
+                                    <div className="flex items-baseline justify-between mb-3">
+                                      <span className="text-lg font-black text-[#157a4f]">Rs.{offer?.totalPrice?.toLocaleString("en-IN") || "0"}</span>
+                                    </div>
+                                    <button className="w-full h-9 bg-[#f0f4ff] text-[#4a5fc1] rounded-lg font-bold text-[11px] hover:bg-[#4a5fc1] hover:text-white transition-all">
+                                      Claim Now
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </section>
+                  )}
+                </div>
+
+        {/* No Products/Offers */}
+        {products.length === 0 && offers.length === 0 && (
+          <section className="mt-12 bg-white rounded-2xl border border-[#d8dce3] p-8 text-center">
+            <p className="text-[#666] text-lg">No products or offers available at this store yet</p>
+          </section>
+        )}
+      </div>
+
+      <Footer />
+    </main>
+  );
+}

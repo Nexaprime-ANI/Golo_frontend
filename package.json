@@ -11,6 +11,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1152.0",
+    "@aws-sdk/s3-request-presigner": "^3.1152.0",
     "@emnapi/core": "^1.11.1",
     "@emnapi/runtime": "^1.11.1",
     "@emnapi/wasi-threads": "^1.2.2",
