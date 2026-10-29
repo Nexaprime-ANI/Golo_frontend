@@ -381,26 +381,36 @@ function NavbarContent({
   const { user, isAuthenticated, logout } = useAuth();
   const logoHref =
     isAuthenticated && user?.accountType === "merchant" ? "/" : "/";
-  const isGolocalSurface =
-    pathname === "/" ||
-    pathname.startsWith("/nearby-deals") ||
-    (pathname.startsWith("/profile") &&
-      !pathname.startsWith("/profile/transactions") &&
-      !/^\/profile\/[a-f0-9]{24}$/i.test(pathname)) ||
-    pathname.startsWith("/my-deals");
   const isChojaSurface =
     pathname.startsWith("/choja") ||
+    pathname.startsWith("/product") ||
+    pathname.startsWith("/category") ||
+    pathname.startsWith("/post-ad") ||
+    pathname.startsWith("/my-ads") ||
+    pathname.startsWith("/listing-management") ||
+    pathname.startsWith("/chats") ||
+    pathname.startsWith("/analytics") ||
+    pathname.startsWith("/i-want") ||
     /^\/profile\/[a-f0-9]{24}$/i.test(pathname) ||
     pathname.startsWith("/profile/transactions");
+  const isGolocalSurface =
+    !isChojaSurface &&
+    (pathname === "/" ||
+      pathname.startsWith("/nearby-deals") ||
+      (pathname.startsWith("/profile") &&
+        !pathname.startsWith("/profile/transactions") &&
+        !/^\/profile\/[a-f0-9]{24}$/i.test(pathname)) ||
+      pathname.startsWith("/my-deals") ||
+      pathname.startsWith("/merchant"));
   const isChojaActive = Boolean(isChojaSurface);
   const isAjubajuActive = !isChojaActive;
   const isMerchantSurface = isAuthenticated && user?.accountType === "merchant";
   const useGolocalHomeNav = isGolocalSurface;
-  const homeNavHref = "/choja";
-  const primaryNavLabel = useGolocalHomeNav ? "My Deals" : "Post Your Ad";
-  const primaryNavHref = useGolocalHomeNav ? "/my-deals" : "/post-ad";
-  const secondaryNavLabel = useGolocalHomeNav ? "Nearby Deals" : "Chats";
-  const secondaryNavHref = useGolocalHomeNav ? "/nearby-deals" : "/chats";
+  const homeNavHref = isChojaActive ? "/choja" : "/";
+  const primaryNavLabel = isChojaActive ? "Post Your Ad" : "My Deals";
+  const primaryNavHref = isChojaActive ? "/post-ad" : "/my-deals";
+  const secondaryNavLabel = isChojaActive ? "Chats" : "Nearby Deals";
+  const secondaryNavHref = isChojaActive ? "/chats" : "/nearby-deals";
 
   const defaultLocationSuggestions = [
     {
@@ -743,7 +753,7 @@ function NavbarContent({
     const isCategorySurface = pathname.startsWith("/category/");
     const targetBase = 
       trimmedSearch !== ""
-        ? "/nearby-deals"
+        ? (isChojaActive ? "/choja" : "/nearby-deals")
         : (isNearbyDetailSurface || pathname === "/" || isUserSurface)
           ? "/nearby-deals"
           : (isCategorySurface || isNearbySurface || pathname.startsWith("/merchant"))
